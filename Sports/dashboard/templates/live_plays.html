@@ -1,0 +1,548 @@
+{% extends "base.html" %}
+
+{% block title %}Today's Plays - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="mb-1"><i class="bi bi-lightning-charge-fill me-2" style="color: var(--primary-light);"></i>Today's Plays</h2>
+        <p class="text-muted mb-0">All plays from today — separated by status (upcoming, live, settled)</p>
+    </div>
+    <div class="col-auto">
+        <span class="refresh-indicator">
+            <span class="spinner-border spinner-border-sm d-none" id="refresh-spinner"></span>
+            Auto-refreshes every 30s
+        </span>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="filter-bar">
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-4 col-md-6">
+            <label class="form-label">Search</label>
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" class="form-control" id="search-input"
+                       placeholder="Search by team, player, bookmaker...">
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-3 col-6">
+            <label class="form-label">Type</label>
+            <select class="form-select" id="filter-type">
+                <option value="">All Types</option>
+                <option value="ev">EV Plays</option>
+                <option value="prop">Props</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-3 col-6">
+            <label class="form-label">Sport</label>
+            <select class="form-select" id="filter-sport">
+                <option value="">All Sports</option>
+                <option value="basketball_nba">NBA</option>
+                <option value="basketball_ncaab">NCAAB</option>
+                <option value="americanfootball_nfl">NFL</option>
+                <option value="americanfootball_ncaaf">NCAAF</option>
+                <option value="icehockey_nhl">NHL</option>
+                <option value="baseball_mlb">MLB</option>
+                <option value="soccer">Soccer</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-3 col-6">
+            <button class="btn btn-primary w-100" onclick="loadLivePlays()">
+                <i class="bi bi-search me-1"></i> Search
+            </button>
+        </div>
+        <div class="col-lg-2 col-md-3 col-6">
+            <button class="btn btn-outline-secondary w-100" onclick="loadLivePlays(); utils.updateLastUpdated();">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Plays Section -->
+<div class="mb-4">
+    <h4 class="mb-3"><i class="bi bi-calendar-check me-2" style="color: var(--warning);"></i>Upcoming</h4>
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-plays table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Sport</th>
+                        <th>Game</th>
+                        <th>Bet</th>
+                        <th>Book</th>
+                        <th>Sent</th>
+                        <th title="Best current odds available">Best Current</th>
+                        <th title="Current value vs market">Current Value</th>
+                        <th>EV</th>
+                        <th>Units</th>
+                        <th>Result</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="upcoming-plays-body">
+                    <tr>
+                        <td colspan="13" class="text-center py-5">
+                            <div class="spinner-border" role="status" style="color: var(--primary-light);"></div>
+                            <p class="mt-3 text-muted mb-0">Loading today's plays...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="no-upcoming-message" class="text-center py-3 d-none">
+        <p class="text-muted mb-0">No upcoming plays</p>
+    </div>
+</div>
+
+<!-- Live Plays Section -->
+<div class="mb-4">
+    <h4 class="mb-3"><i class="bi bi-broadcast me-2" style="color: var(--danger);"></i>Live</h4>
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-plays table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Sport</th>
+                        <th>Game</th>
+                        <th>Bet</th>
+                        <th>Book</th>
+                        <th>Sent</th>
+                        <th title="Best current odds available">Best Current</th>
+                        <th title="Current value vs market">Current Value</th>
+                        <th>EV</th>
+                        <th>Units</th>
+                        <th>Result</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="live-plays-body">
+                    <tr>
+                        <td colspan="13" class="text-center py-5">
+                            <div class="spinner-border" role="status" style="color: var(--primary-light);"></div>
+                            <p class="mt-3 text-muted mb-0">Loading today's plays...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="no-live-message" class="text-center py-3 d-none">
+        <p class="text-muted mb-0">No live plays</p>
+    </div>
+</div>
+
+<!-- Settled Plays Section -->
+<div class="mb-4">
+    <h4 class="mb-3"><i class="bi bi-check-circle me-2" style="color: var(--success);"></i>Settled</h4>
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-plays table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Sport</th>
+                        <th>Game</th>
+                        <th>Bet</th>
+                        <th>Book</th>
+                        <th>Sent</th>
+                        <th title="Best current odds available">Best Current</th>
+                        <th title="Current value vs market">Current Value</th>
+                        <th>EV</th>
+                        <th>Units</th>
+                        <th>Result</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="settled-plays-body">
+                    <tr>
+                        <td colspan="13" class="text-center py-5">
+                            <div class="spinner-border" role="status" style="color: var(--primary-light);"></div>
+                            <p class="mt-3 text-muted mb-0">Loading today's plays...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="no-settled-message" class="text-center py-3 d-none">
+        <p class="text-muted mb-0">No settled plays</p>
+    </div>
+</div>
+
+<!-- Result Entry Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-check2-square me-2" style="color: var(--primary-light);"></i>Enter Result</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-play-info" class="mb-4">
+                    <!-- Play info will be inserted here -->
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-lg" onclick="setResult('win')">
+                        <i class="bi bi-check-circle me-2"></i> WIN
+                    </button>
+                    <button class="btn btn-danger btn-lg" onclick="setResult('loss')">
+                        <i class="bi bi-x-circle me-2"></i> LOSS
+                    </button>
+                    <button class="btn btn-secondary btn-lg" onclick="setResult('push')">
+                        <i class="bi bi-dash-circle me-2"></i> PUSH
+                    </button>
+                </div>
+                <hr class="my-4">
+                <button class="btn btn-outline-warning w-100" onclick="setResult(null)">
+                    <i class="bi bi-arrow-counterclockwise me-2"></i> Clear Result (Mark as Pending)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast for notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="result-toast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <strong class="me-auto">Result Updated</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toast-message"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const utils = dashboardUtils;
+let selectedPlayId = null;
+let selectedPlayType = null;
+let resultModal = null;
+let refreshInterval = null;
+
+// Prop type display names
+const propTypeNames = {
+    'player_points': 'Points',
+    'player_rebounds': 'Rebounds',
+    'player_assists': 'Assists',
+    'player_threes': '3-Pointers',
+    'player_points_rebounds_assists': 'PRA',
+    'player_pass_yds': 'Pass Yds',
+    'player_rush_yds': 'Rush Yds',
+    'player_reception_yds': 'Rec Yds',
+    'player_receptions': 'Receptions',
+    'player_anytime_td': 'Anytime TD',
+    'batter_hits': 'Hits',
+    'pitcher_strikeouts': 'Strikeouts',
+    'player_goals': 'Goals',
+    'player_assists': 'Assists',
+    'player_shots_on_goal': 'SOG',
+    'player_total_shots': 'Total Shots',
+    'player_total_tackles': 'Tackles',
+    'player_total_cards': 'Cards',
+    'player_goal_scorer_anytime': 'Anytime Scorer',
+};
+
+function formatPropType(propType) {
+    return propTypeNames[propType] || propType?.replace('player_', '').replace('batter_', '').replace('pitcher_', '').replace(/_/g, ' ') || '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    loadLivePlays();
+    
+    // Auto-refresh every 30 seconds
+    refreshInterval = setInterval(() => {
+        loadLivePlays();
+    }, 30000);
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
+
+function renderPlayRow(play) {
+    const evClass = play.sent_ev_percent >= 5 ? 'ev-high' :
+                   play.sent_ev_percent >= 1 ? 'ev-positive' : '';
+    const sentOddsClass = play.sent_odds_american > 0 ? 'positive-odds' : 'negative-odds';
+
+    // Type badge
+    const typeBadge = play.play_type === 'prop' 
+        ? '<span class="badge badge-prop">Prop</span>'
+        : '<span class="badge badge-ev">EV</span>';
+
+    // Format bet display with graph link
+    let betDisplay;
+    let graphLink = '';
+    if (play.play_type === 'prop') {
+        const propName = formatPropType(play.prop_type);
+        betDisplay = `<strong class="player-name">${play.player_name}</strong><br><small class="text-muted">${play.outcome} ${play.line} ${propName}</small>`;
+        graphLink = `/prop-graph/${play.event_id}?player=${encodeURIComponent(play.player_name)}&prop_type=${play.prop_type}&line=${play.line}`;
+    } else {
+        betDisplay = `<strong>${play.outcome}</strong>${play.point ? ' ' + play.point : ''}<br><small class="text-muted">${utils.formatMarket(play.market)}</small>`;
+        graphLink = `/graph/${play.event_id}?market=${play.market}&outcome=${encodeURIComponent(play.outcome)}`;
+    }
+
+    // Result badge with click handler
+    let resultBadge = `<button class="btn btn-sm btn-outline-warning btn-result" onclick="openResultModal(${play.id}, '${play.play_type}', event)">
+        <i class="bi bi-clock"></i> Pending
+    </button>`;
+    if (play.result === 'win') {
+        resultBadge = `<button class="btn btn-sm btn-success btn-result" onclick="openResultModal(${play.id}, '${play.play_type}', event)">
+            <i class="bi bi-check"></i> Win
+        </button>`;
+    } else if (play.result === 'loss') {
+        resultBadge = `<button class="btn btn-sm btn-danger btn-result" onclick="openResultModal(${play.id}, '${play.play_type}', event)">
+            <i class="bi bi-x"></i> Loss
+        </button>`;
+    } else if (play.result === 'push') {
+        resultBadge = `<button class="btn btn-sm btn-secondary btn-result" onclick="openResultModal(${play.id}, '${play.play_type}', event)">
+            <i class="bi bi-dash"></i> Push
+        </button>`;
+    }
+
+    // Current odds and value display (pre-game only)
+    let oddsColDisplay = '<span class="text-muted">--</span>';
+    let valueColDisplay = '<span class="text-muted">--</span>';
+    let oddsColClass = '';
+    
+    if (play.current_odds_american !== null && play.current_odds_american !== undefined) {
+        oddsColClass = play.current_odds_american > 0 ? 'positive-odds' : 'negative-odds';
+        let bestBook = play.current_best_book ? utils.formatBookmaker(play.current_best_book) : '';
+        // Show alternate line indicator if line moved
+        if (play.alternate_line !== null && play.alternate_line !== undefined) {
+            bestBook = `@ ${play.alternate_line}`;
+        }
+        oddsColDisplay = `<span class="${oddsColClass}">${utils.formatOdds(play.current_odds_american)}</span>${bestBook ? `<br><small class="text-muted">${bestBook}</small>` : ''}`;
+    }
+    
+    if (play.current_value !== null && play.current_value !== undefined) {
+        const currentValueClass = play.current_value >= 0 ? 'text-success' : 'text-danger';
+        const sign = play.current_value >= 0 ? '+' : '';
+        // Show appropriate label based on value source
+        let label = '';
+        if (play.value_is_sent_ev) {
+            label = '<br><small class="text-muted">Sent EV</small>';
+        } else if (play.value_is_estimated) {
+            label = '<br><small class="text-muted" title="Estimated from alternate line">Est. Value</small>';
+        }
+        valueColDisplay = `<span class="${currentValueClass} fw-semibold">${sign}${play.current_value.toFixed(2)}%</span>${label}`;
+    }
+
+    return `
+        <tr>
+            <td class="small text-muted">${new Date(play.sent_at).toLocaleDateString()}</td>
+            <td>${typeBadge}</td>
+            <td><span class="badge bg-dark badge-sport">${utils.getSportName(play.sport)}</span></td>
+            <td class="small">${play.away_team} @ ${play.home_team}</td>
+            <td>${betDisplay}</td>
+            <td class="small">${utils.formatBookmaker(play.soft_book)}</td>
+            <td class="odds ${sentOddsClass}">${utils.formatOdds(play.sent_odds_american)}</td>
+            <td class="odds">${oddsColDisplay}</td>
+            <td>${valueColDisplay}</td>
+            <td class="${evClass}">+${play.sent_ev_percent.toFixed(2)}%</td>
+            <td>${play.units.toFixed(2)}</td>
+            <td>${resultBadge}</td>
+            <td>
+                <a href="${graphLink}" class="btn btn-outline-secondary btn-sm py-0 px-2" title="View odds movement">
+                    <i class="bi bi-graph-up"></i>
+                </a>
+            </td>
+        </tr>
+    `;
+}
+
+async function loadLivePlays() {
+    try {
+        const search = document.getElementById('search-input').value;
+        const typeFilter = document.getElementById('filter-type').value;
+        const sportFilter = document.getElementById('filter-sport').value;
+
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (typeFilter) params.set('type', typeFilter);
+        if (sportFilter) params.set('sport', sportFilter);
+
+        const response = await fetch('/api/live-plays?' + params.toString());
+        const plays = await response.json();
+
+        // Separate plays into three categories
+        const now = new Date();
+        const upcoming = [];
+        const live = [];
+        const settled = [];
+
+        plays.forEach(play => {
+            const commenceTime = new Date(play.commence_time);
+            
+            // Settled: has a result assigned
+            if (play.result !== null && play.result !== undefined) {
+                settled.push(play);
+            }
+            // Upcoming: game hasn't started yet
+            else if (commenceTime > now) {
+                upcoming.push(play);
+            }
+            // Live: game has started but no result yet
+            else {
+                live.push(play);
+            }
+        });
+
+        // Render each section
+        const upcomingBody = document.getElementById('upcoming-plays-body');
+        const liveBody = document.getElementById('live-plays-body');
+        const settledBody = document.getElementById('settled-plays-body');
+        
+        const noUpcomingMsg = document.getElementById('no-upcoming-message');
+        const noLiveMsg = document.getElementById('no-live-message');
+        const noSettledMsg = document.getElementById('no-settled-message');
+
+        // Upcoming section
+        if (upcoming.length === 0) {
+            upcomingBody.innerHTML = '';
+            noUpcomingMsg.classList.remove('d-none');
+        } else {
+            noUpcomingMsg.classList.add('d-none');
+            upcomingBody.innerHTML = upcoming.map(renderPlayRow).join('');
+        }
+
+        // Live section
+        if (live.length === 0) {
+            liveBody.innerHTML = '';
+            noLiveMsg.classList.remove('d-none');
+        } else {
+            noLiveMsg.classList.add('d-none');
+            liveBody.innerHTML = live.map(renderPlayRow).join('');
+        }
+
+        // Settled section
+        if (settled.length === 0) {
+            settledBody.innerHTML = '';
+            noSettledMsg.classList.remove('d-none');
+        } else {
+            noSettledMsg.classList.add('d-none');
+            settledBody.innerHTML = settled.map(renderPlayRow).join('');
+        }
+
+        utils.updateLastUpdated();
+    } catch (e) {
+        console.error('Failed to load today\'s plays:', e);
+        // Show error on first section's parent
+        const firstSection = document.querySelector('.mb-4 .card');
+        if (firstSection) {
+            utils.showError(firstSection, 'Failed to load today\'s plays');
+        }
+    }
+}
+
+async function openResultModal(playId, playType, event) {
+    event.stopPropagation();
+    selectedPlayId = playId;
+    selectedPlayType = playType;
+
+    try {
+        const response = await fetch(`/api/play/${playType}/${playId}`);
+        const play = await response.json();
+
+        let betInfo;
+        if (playType === 'prop') {
+            const propName = formatPropType(play.prop_type);
+            betInfo = `<p class="mb-1"><strong>Player:</strong> ${play.player_name}</p>
+                       <p class="mb-1"><strong>Bet:</strong> ${play.outcome} ${play.line} ${propName}</p>`;
+        } else {
+            betInfo = `<p class="mb-1"><strong>Bet:</strong> ${play.outcome} ${play.point ? play.point : ''}</p>`;
+        }
+
+        document.getElementById('modal-play-info').innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-dark badge-sport me-2">${utils.getSportName(play.sport)}</span>
+                    </div>
+                    <h5 class="card-title mb-3">${play.away_team} @ ${play.home_team}</h5>
+                    ${betInfo}
+                    <div class="row mt-3 text-center">
+                        <div class="col-4">
+                            <div class="small text-muted">Odds</div>
+                            <div class="fw-bold ${play.sent_odds_american > 0 ? 'text-success' : 'text-danger'}">${utils.formatOdds(play.sent_odds_american)}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="small text-muted">Units</div>
+                            <div class="fw-bold">${play.units.toFixed(2)}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="small text-muted">Book</div>
+                            <div class="fw-bold">${utils.formatBookmaker(play.soft_book)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        resultModal.show();
+    } catch (e) {
+        console.error('Failed to load play:', e);
+        alert('Failed to load play details');
+    }
+}
+
+async function setResult(result) {
+    if (!selectedPlayId || !selectedPlayType) return;
+
+    try {
+        const response = await fetch(`/api/play/${selectedPlayType}/${selectedPlayId}/result`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ result })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            resultModal.hide();
+
+            const toast = new bootstrap.Toast(document.getElementById('result-toast'));
+            let message = result ? `Result set to ${result.toUpperCase()}` : 'Result cleared';
+            if (data.profit_units !== null && data.profit_units !== undefined) {
+                const profitStr = data.profit_units >= 0 ? `+${data.profit_units.toFixed(2)}` : data.profit_units.toFixed(2);
+                message += ` (P/L: ${profitStr} units)`;
+            }
+            document.getElementById('toast-message').textContent = message;
+            toast.show();
+
+            loadLivePlays();
+        } else {
+            alert('Failed to update result: ' + data.message);
+        }
+    } catch (e) {
+        console.error('Failed to update result:', e);
+        alert('Failed to update result');
+    }
+}
+
+// Event listeners
+document.getElementById('search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') loadLivePlays();
+});
+document.getElementById('filter-type').addEventListener('change', () => loadLivePlays());
+document.getElementById('filter-sport').addEventListener('change', () => loadLivePlays());
+
+const debouncedSearch = utils.debounce(() => loadLivePlays(), 300);
+document.getElementById('search-input').addEventListener('input', debouncedSearch);
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{
+  "MIN_EV_PERCENT": 7,
+  "MAX_EV_PERCENT": 20,
+  "MIN_PROFIT_PERCENT": 1,
+  "MAX_PROFIT_PERCENT": 20,
+  "PEAK_HOURS_START": 14,
+  "PEAK_HOURS_END": 22,
+  "POLL_INTERVAL_PEAK": 80,
+  "POLL_INTERVAL_OFFPEAK": 1800,
+  "SHARP_BOOKMAKER": "pinnacle",
+  "DEVIG_METHOD": "power",
+  "ALERT_ON_EV": true,
+  "ALERT_ON_PROP_EV": true,
+  "ALERT_ON_ARB": true,
+  "ENABLE_PLAYER_PROPS": true,
+  "PROP_HOURS_BEFORE_GAME": 12,
+  "MAX_PROP_EVENTS_PER_CYCLE": 0,
+  "DATA_RETENTION_DAYS": 7,
+  "SPORTS": [
+    "americanfootball_ncaaf",
+    "basketball_nba",
+    "basketball_ncaab",
+    "soccer"
+  ],
+  "INCLUDE_BOOKMAKERS": [
+    "draftkings",
+    "fanduel",
+    "betmgm",
+    "caesars",
+    "williamhill_us",
+    "fanatics"
+  ],
+  "DFS_BOOKMAKERS": [
+    "prizepicks",
+    "underdog"
+  ]
+}

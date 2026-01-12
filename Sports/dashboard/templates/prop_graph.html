@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}Prop Odds Movement - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/props" class="text-decoration-none" style="color: var(--prop-color);">Player Props</a></li>
+                <li class="breadcrumb-item active text-muted">Odds Movement</li>
+            </ol>
+        </nav>
+        <h2 class="mb-1"><i class="bi bi-graph-up me-2" style="color: var(--prop-color);"></i>Prop Odds Movement</h2>
+        <p class="text-muted mb-0" id="graph-subtitle">Loading...</p>
+    </div>
+</div>
+
+<!-- Player & Event Info Card -->
+<div class="card mb-4" id="player-info-card" style="border-left: 4px solid var(--prop-color);">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-person-circle"></i> <span id="player-name">--</span></h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Game</div>
+                <strong id="event-teams">--</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Start Time</div>
+                <strong id="event-time">--</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Prop Type</div>
+                <strong id="prop-type-display">--</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Data Points</div>
+                <strong id="data-points">--</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Line Selection -->
+<div class="card mb-4" id="line-selection-card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-list-check"></i> Select Line</h6>
+    </div>
+    <div class="card-body">
+        <div id="line-buttons-container">
+            <span class="text-muted">Loading available lines...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Currently Viewing -->
+<div class="alert d-flex align-items-center mb-4" id="viewing-alert" style="display: none !important; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); color: var(--prop-color);">
+    <i class="bi bi-eye me-2"></i>
+    <span>Viewing: <strong id="current-selection">--</strong></span>
+</div>
+
+<!-- Chart Controls -->
+<div class="filter-bar mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label">Bookmakers</label>
+            <div id="bookmaker-checkboxes" class="d-flex flex-wrap gap-3">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Odds Format</label>
+            <select class="form-select" id="odds-format">
+                <option value="american">American</option>
+                <option value="decimal">Decimal</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Outcome</label>
+            <select class="form-select" id="outcome-filter">
+                <option value="">Both Over & Under</option>
+                <option value="Over">Over Only</option>
+                <option value="Under">Under Only</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-secondary w-100" id="toggle-all-books">
+                <i class="bi bi-toggles me-1"></i> Toggle All
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Container -->
+<div class="card mb-4">
+    <div class="card-body p-0">
+        <div class="graph-container" style="height: 450px; padding: 1.5rem;">
+            <canvas id="prop-odds-chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Play Info Card -->
+<div class="card" id="play-info-card" style="display: none; border-left: 4px solid var(--success-color);">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-flag-fill" style="color: var(--success-color);"></i> Play Sent</h6>
+    </div>
+    <div class="card-body" id="play-details">
+        <!-- Populated if play exists -->
+    </div>
+</div>
+
+<!-- No Data Message -->
+<div id="no-data-message" class="text-center py-5 d-none">
+    <i class="bi bi-graph-down" style="font-size: 4rem; color: var(--text-muted); opacity: 0.3;"></i>
+    <p class="mt-3 text-muted mb-4">No odds history available for this prop</p>
+    <a href="/props" class="btn btn-primary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Props
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const eventId = "{{ event_id }}";
+const playerName = decodeURIComponent("{{ player_name }}");
+const propType = "{{ prop_type }}";
+const requestedLine = "{{ line }}" ? parseFloat("{{ line }}") : null;
+
+let propChart = null;
+let chartData = null;
+let currentLine = null;
+let currentOutcome = '';
+
+const utils = dashboardUtils;
+
+// Prop type display names
+const propTypeNames = {
+    'player_points': 'Points',
+    'player_rebounds': 'Rebounds',
+    'player_assists': 'Assists',
+    'player_threes': '3-Pointers',
+    'player_points_rebounds_assists': 'Pts+Reb+Ast',
+    'player_pass_yds': 'Pass Yards',
+    'player_rush_yds': 'Rush Yards',
+    'player_reception_yds': 'Rec Yards',
+    'player_receptions': 'Receptions',
+    'batter_hits': 'Hits',
+    'pitcher_strikeouts': 'Strikeouts',
+    'player_goals': 'Goals',
+    'player_assists': 'Assists',
+    'player_shots_on_goal': 'SOG',
+    'player_total_shots': 'Total Shots',
+    'player_total_tackles': 'Tackles',
+    'player_total_cards': 'Cards',
+    'player_goal_scorer_anytime': 'Anytime Scorer',
+};
+
+function formatPropType(pt) {
+    return propTypeNames[pt] || pt.replace('player_', '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+// Bookmaker colors (soft + sharp + DFS books)
+const BOOK_COLORS = {
+    // Soft books
+    'draftkings': '#53b94e',
+    'fanduel': '#1493ff',
+    'betmgm': '#bfa87d',
+    'caesars': '#0a4d3c',
+    'williamhill_us': '#00385b',
+    'pointsbet_us': '#ff6b00',
+    'fanatics': '#e31837',
+    'bovada': '#d4af37',
+    // Sharp books
+    'pinnacle': '#c41e3a',
+    'betonlineag': '#ff9900',
+    'betfair': '#ffb80c',
+    'circa': '#1a1a2e',
+    'lowvig': '#00a86b',
+    'betanyports': '#8b4513',
+    // DFS (Daily Fantasy Sports) books
+    'prizepicks': '#7c3aed',
+    'underdog': '#f59e0b',
+    'betr_us_dfs': '#06b6d4',
+};
+
+function getBookColor(book) {
+    return BOOK_COLORS[book] || `hsl(${(book.length * 47) % 360}, 65%, 50%)`;
+}
+
+async function loadPropGraph() {
+    try {
+        const params = new URLSearchParams();
+        params.set('player', playerName);
+        params.set('prop_type', propType);
+        if (requestedLine !== null) params.set('line', requestedLine);
+
+        const response = await fetch(`/api/prop-odds-history/${eventId}?${params}`);
+        chartData = await response.json();
+
+        // Check if we have data
+        if (!chartData.by_bookmaker || Object.keys(chartData.by_bookmaker).length === 0) {
+            document.getElementById('no-data-message').classList.remove('d-none');
+            document.getElementById('player-info-card').style.display = 'none';
+            document.getElementById('line-selection-card').style.display = 'none';
+            document.querySelector('.filter-bar').style.display = 'none';
+            document.querySelector('.card:has(canvas)').style.display = 'none';
+            return;
+        }
+
+        // Update header info
+        document.getElementById('player-name').textContent = chartData.player_name;
+        document.getElementById('graph-subtitle').textContent = 
+            `${chartData.player_name} — ${formatPropType(chartData.prop_type)}`;
+        document.getElementById('prop-type-display').textContent = formatPropType(chartData.prop_type);
+        document.getElementById('data-points').textContent = chartData.total_snapshots;
+
+        if (chartData.event) {
+            document.getElementById('event-teams').textContent = 
+                `${chartData.event.away_team} @ ${chartData.event.home_team}`;
+            document.getElementById('event-time').textContent = 
+                new Date(chartData.event.commence_time).toLocaleString();
+        }
+
+        // Build line selection buttons
+        buildLineButtons(chartData.available_lines);
+
+        // Build bookmaker checkboxes
+        buildBookmakerCheckboxes(Object.keys(chartData.by_bookmaker));
+
+        // Show play info if exists
+        if (chartData.plays && chartData.plays.length > 0) {
+            showPlayInfo(chartData.plays);
+        }
+
+        // Select initial line
+        if (requestedLine !== null && chartData.available_lines.includes(requestedLine)) {
+            selectLine(requestedLine);
+        } else if (chartData.available_lines.length > 0) {
+            selectLine(chartData.available_lines[0]);
+        }
+
+    } catch (e) {
+        console.error('Failed to load prop graph:', e);
+        document.getElementById('graph-subtitle').textContent = 'Failed to load data';
+    }
+}
+
+function buildLineButtons(lines) {
+    const container = document.getElementById('line-buttons-container');
+
+    if (lines.length === 0) {
+        container.innerHTML = '<span class="text-muted">No lines available</span>';
+        return;
+    }
+
+    container.innerHTML = lines.map(line => `
+        <button class="btn btn-outline-primary btn-sm me-2 mb-2 line-btn" data-line="${line}">
+            ${line}
+        </button>
+    `).join('');
+
+    // Add click handlers
+    container.querySelectorAll('.line-btn').forEach(btn => {
+        btn.addEventListener('click', () => selectLine(parseFloat(btn.dataset.line)));
+    });
+}
+
+function selectLine(line) {
+    currentLine = line;
+
+    // Update button states
+    document.querySelectorAll('.line-btn').forEach(btn => {
+        if (parseFloat(btn.dataset.line) === line) {
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-primary');
+        } else {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+        }
+    });
+
+    // Update viewing indicator
+    const alert = document.getElementById('viewing-alert');
+    alert.style.display = 'flex';
+    document.getElementById('current-selection').textContent = `Line ${line}`;
+
+    buildChart();
+}
+
+function buildBookmakerCheckboxes(bookmakers) {
+    const container = document.getElementById('bookmaker-checkboxes');
+
+    container.innerHTML = bookmakers.map(book => `
+        <div class="form-check">
+            <input class="form-check-input book-check" type="checkbox" 
+                   id="book-${book}" value="${book}" checked>
+            <label class="form-check-label" for="book-${book}">
+                <span style="color: ${getBookColor(book)}; font-size: 1.1em;">●</span>
+                ${utils.formatBookmaker(book)}
+            </label>
+        </div>
+    `).join('');
+
+    // Add change handlers
+    container.querySelectorAll('.book-check').forEach(cb => {
+        cb.addEventListener('change', buildChart);
+    });
+
+    // Toggle all button
+    document.getElementById('toggle-all-books').addEventListener('click', () => {
+        const checks = document.querySelectorAll('.book-check');
+        const allChecked = Array.from(checks).every(c => c.checked);
+        checks.forEach(c => c.checked = !allChecked);
+        buildChart();
+    });
+
+    // Outcome filter
+    document.getElementById('outcome-filter').addEventListener('change', buildChart);
+
+    // Odds format
+    document.getElementById('odds-format').addEventListener('change', buildChart);
+}
+
+function showPlayInfo(plays) {
+    const card = document.getElementById('play-info-card');
+    const details = document.getElementById('play-details');
+
+    card.style.display = 'block';
+    details.innerHTML = plays.map(play => `
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Sent At</div>
+                <strong>${new Date(play.sent_at).toLocaleString()}</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Line</div>
+                <strong>${play.outcome} ${play.line}</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Sent Odds</div>
+                <strong class="${play.sent_odds_american > 0 ? 'text-success' : 'text-danger'}">
+                    ${utils.formatOdds(play.sent_odds_american)}
+                </strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Closing Odds</div>
+                <strong>${play.closing_odds_american ? utils.formatOdds(play.closing_odds_american) : '--'}</strong>
+            </div>
+        </div>
+    `).join('<hr class="my-3">');
+}
+
+function buildChart() {
+    if (!chartData || currentLine === null) return;
+
+    const ctx = document.getElementById('prop-odds-chart').getContext('2d');
+    const selectedBooks = Array.from(document.querySelectorAll('.book-check:checked')).map(c => c.value);
+    const oddsFormat = document.getElementById('odds-format').value;
+    const outcomeFilter = document.getElementById('outcome-filter').value;
+
+    const datasets = [];
+
+    selectedBooks.forEach(book => {
+        const snapshots = chartData.by_bookmaker[book] || [];
+
+        // Filter by line and outcome
+        const filtered = snapshots.filter(s => {
+            if (s.line !== currentLine) return false;
+            if (outcomeFilter && s.outcome !== outcomeFilter) return false;
+            return true;
+        });
+
+        // Group by outcome (Over/Under)
+        const byOutcome = {};
+        filtered.forEach(snap => {
+            if (!byOutcome[snap.outcome]) byOutcome[snap.outcome] = [];
+            byOutcome[snap.outcome].push(snap);
+        });
+
+        // Create dataset for each outcome
+        Object.entries(byOutcome).forEach(([outcome, snaps]) => {
+            const points = snaps.map(s => ({
+                x: new Date(s.timestamp),
+                y: oddsFormat === 'american' ? s.odds : americanToDecimal(s.odds)
+            })).sort((a, b) => a.x - b.x);
+
+            if (points.length === 0) return;
+
+            const baseColor = getBookColor(book);
+            const isUnder = outcome === 'Under';
+
+            datasets.push({
+                label: `${utils.formatBookmaker(book)} ${outcome}`,
+                data: points,
+                borderColor: baseColor,
+                backgroundColor: baseColor + '20',
+                borderWidth: 2.5,
+                borderDash: isUnder ? [5, 5] : [],
+                pointRadius: 3,
+                pointHoverRadius: 7,
+                fill: false,
+                tension: 0.25,
+            });
+        });
+    });
+
+    // Add play markers
+    const annotations = {};
+    if (chartData.plays) {
+        chartData.plays.forEach((play, idx) => {
+            if (play.line === currentLine) {
+                annotations[`play-${idx}`] = {
+                    type: 'line',
+                    xMin: new Date(play.sent_at),
+                    xMax: new Date(play.sent_at),
+                    borderColor: 'rgba(5, 150, 105, 0.9)',
+                    borderWidth: 3,
+                    borderDash: [6, 4],
+                    label: {
+                        display: true,
+                        content: `Play: ${play.outcome} @ ${utils.formatOdds(play.sent_odds_american)}`,
+                        position: 'start',
+                        backgroundColor: 'rgba(5, 150, 105, 0.9)',
+                        color: '#fff',
+                        font: { size: 11, weight: '600', family: 'Inter' },
+                        padding: 6,
+                        borderRadius: 4
+                    }
+                };
+            }
+        });
+    }
+
+    // Destroy existing
+    if (propChart) propChart.destroy();
+
+    // Create chart
+    propChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'nearest',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'hour',
+                        displayFormats: { hour: 'MMM d, ha' }
+                    },
+                    title: { display: true, text: 'Time', font: { weight: '600', family: 'Inter' }, color: '#94a3b8' },
+                    grid: { color: 'rgba(148, 163, 184, 0.08)', drawBorder: false },
+                    ticks: { color: '#94a3b8', font: { family: 'Inter' } }
+                },
+                y: {
+                    title: { 
+                        display: true, 
+                        text: oddsFormat === 'american' ? 'American Odds' : 'Decimal Odds',
+                        font: { weight: '600', family: 'Inter' },
+                        color: '#94a3b8'
+                    },
+                    ticks: {
+                        callback: v => oddsFormat === 'american' ? (v > 0 ? '+' + v : v) : v.toFixed(2),
+                        color: '#94a3b8',
+                        font: { family: 'Inter' }
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.08)', drawBorder: false }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20,
+                        font: { size: 12, family: 'Inter' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    titleFont: { size: 13, weight: '600', family: 'Inter' },
+                    bodyFont: { size: 12, family: 'Inter' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    borderWidth: 1,
+                    callbacks: {
+                        title: ctx => new Date(ctx[0].raw.x).toLocaleString(),
+                        label: ctx => {
+                            const v = ctx.raw.y;
+                            const formatted = oddsFormat === 'american' ? (v > 0 ? '+' + v : v) : v.toFixed(2);
+                            return `${ctx.dataset.label}: ${formatted}`;
+                        }
+                    }
+                },
+                annotation: { annotations }
+            }
+        }
+    });
+}
+
+function americanToDecimal(american) {
+    return american > 0 ? (american / 100) + 1 : (100 / Math.abs(american)) + 1;
+}
+
+// Initialize
+loadPropGraph();
+</script>
+{% endblock %}

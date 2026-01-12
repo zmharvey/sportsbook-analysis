@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Player Props - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="mb-1"><i class="bi bi-person-circle me-2" style="color: var(--prop-color);"></i>Player Props</h2>
+        <p class="text-muted mb-0">+EV opportunities on player prop bets</p>
+    </div>
+    <div class="col-auto">
+        <span class="refresh-indicator">
+            <span class="spinner-border spinner-border-sm d-none" id="refresh-spinner"></span>
+            Auto-refreshes every 30s
+        </span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-2 col-md-4 col-6">
+            <label class="form-label">Sport</label>
+            <select class="form-select" id="filter-sport">
+                <option value="">All Sports</option>
+                <option value="basketball_nba">NBA</option>
+                <option value="basketball_ncaab">NCAAB</option>
+                <option value="americanfootball_nfl">NFL</option>
+                <option value="americanfootball_ncaaf">NCAAF</option>
+                <option value="icehockey_nhl">NHL</option>
+                <option value="baseball_mlb">MLB</option>
+                <option value="soccer">Soccer</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <label class="form-label">Prop Type</label>
+            <select class="form-select" id="filter-prop-type">
+                <option value="">All Props</option>
+                <optgroup label="Basketball">
+                    <option value="player_points">Points</option>
+                    <option value="player_rebounds">Rebounds</option>
+                    <option value="player_assists">Assists</option>
+                    <option value="player_threes">3-Pointers</option>
+                    <option value="player_points_rebounds_assists">Pts+Reb+Ast</option>
+                </optgroup>
+                <optgroup label="Football">
+                    <option value="player_pass_yds">Pass Yards</option>
+                    <option value="player_pass_tds">Pass TDs</option>
+                    <option value="player_rush_yds">Rush Yards</option>
+                    <option value="player_reception_yds">Rec Yards</option>
+                    <option value="player_receptions">Receptions</option>
+                    <option value="player_anytime_td">Anytime TD</option>
+                </optgroup>
+                <optgroup label="Hockey">
+                    <option value="player_goals">Goals</option>
+                    <option value="player_shots_on_goal">Shots on Goal</option>
+                </optgroup>
+                <optgroup label="Baseball">
+                    <option value="batter_hits">Hits</option>
+                    <option value="batter_total_bases">Total Bases</option>
+                    <option value="pitcher_strikeouts">Pitcher Ks</option>
+                </optgroup>
+                <optgroup label="Soccer">
+                    <option value="player_goals">Goals</option>
+                    <option value="player_assists">Assists</option>
+                    <option value="player_shots_on_goal">Shots on Goal</option>
+                    <option value="player_total_shots">Total Shots</option>
+                    <option value="player_goal_scorer_anytime">Anytime Scorer</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <label class="form-label">Min EV</label>
+            <select class="form-select" id="filter-min-ev">
+                <option value="0">All</option>
+                <option value="2">2%+</option>
+                <option value="3" selected>3%+</option>
+                <option value="5">5%+</option>
+                <option value="7">7%+</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <label class="form-label">Bookmaker</label>
+            <select class="form-select" id="filter-bookmaker">
+                <option value="">All Books</option>
+                <option value="draftkings">DraftKings</option>
+                <option value="fanduel">FanDuel</option>
+                <option value="betmgm">BetMGM</option>
+                <option value="caesars">Caesars</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <label class="form-label">Player</label>
+            <input type="text" class="form-control" id="filter-player" placeholder="Search player...">
+        </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <button class="btn btn-primary w-100" onclick="loadProps()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Props Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-plays table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Sport</th>
+                    <th>Game</th>
+                    <th>Player</th>
+                    <th>Prop</th>
+                    <th>Line</th>
+                    <th>Book</th>
+                    <th>Odds</th>
+                    <th title="Fair probability from sharp book consensus">Fair Prob</th>
+                    <th>EV</th>
+                    <th>Units</th>
+                    <th>Sent</th>
+                </tr>
+            </thead>
+            <tbody id="props-table-body">
+                <tr>
+                    <td colspan="11" class="text-center py-5">
+                        <div class="spinner-border" role="status" style="color: var(--prop-color);"></div>
+                        <p class="mt-3 text-muted mb-0">Loading player props...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="no-props-message" class="text-center py-5 d-none">
+    <i class="bi bi-person-x" style="font-size: 4rem; color: var(--text-muted); opacity: 0.3;"></i>
+    <p class="mt-3 text-muted mb-0">No player prop plays found matching your filters</p>
+</div>
+
+<div class="text-muted small mt-3" id="showing-count"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const utils = dashboardUtils;
+
+// Prop type display names
+const propTypeNames = {
+    'player_points': 'Points',
+    'player_rebounds': 'Rebounds',
+    'player_assists': 'Assists',
+    'player_threes': '3-Pointers',
+    'player_points_rebounds_assists': 'PRA',
+    'player_points_rebounds': 'P+R',
+    'player_points_assists': 'P+A',
+    'player_rebounds_assists': 'R+A',
+    'player_blocks': 'Blocks',
+    'player_steals': 'Steals',
+    'player_turnovers': 'Turnovers',
+    'player_pass_yds': 'Pass Yds',
+    'player_pass_tds': 'Pass TDs',
+    'player_rush_yds': 'Rush Yds',
+    'player_reception_yds': 'Rec Yds',
+    'player_receptions': 'Recs',
+    'player_anytime_td': 'Any TD',
+    'player_goals': 'Goals',
+    'player_assists': 'Assists',
+    'player_shots_on_goal': 'SOG',
+    'player_total_shots': 'Total Shots',
+    'player_total_tackles': 'Tackles',
+    'player_total_cards': 'Cards',
+    'player_goal_scorer_anytime': 'Anytime Scorer',
+    'batter_hits': 'Hits',
+    'batter_total_bases': 'TBs',
+    'pitcher_strikeouts': 'Ks',
+};
+
+function formatPropType(propType) {
+    return propTypeNames[propType] || propType.replace('player_', '').replace('batter_', '').replace('pitcher_', '').replace(/_/g, ' ');
+}
+
+async function loadProps() {
+    const spinner = document.getElementById('refresh-spinner');
+    spinner.classList.remove('d-none');
+
+    const sport = document.getElementById('filter-sport').value;
+    const propType = document.getElementById('filter-prop-type').value;
+    const minEv = document.getElementById('filter-min-ev').value;
+    const bookmaker = document.getElementById('filter-bookmaker').value;
+    const player = document.getElementById('filter-player').value.toLowerCase();
+
+    try {
+        const response = await fetch('/api/prop-plays');
+        const props = await response.json();
+
+        const tbody = document.getElementById('props-table-body');
+        const noPropsMsg = document.getElementById('no-props-message');
+        const showingCount = document.getElementById('showing-count');
+
+        // Filter client-side
+        let filtered = props;
+
+        if (sport) {
+            filtered = filtered.filter(p => p.sport === sport);
+        }
+        if (propType) {
+            filtered = filtered.filter(p => p.prop_type === propType);
+        }
+        const minEvNum = parseFloat(minEv) || 0;
+        if (minEvNum > 0) {
+            filtered = filtered.filter(p => p.sent_ev_percent >= minEvNum);
+        }
+        if (bookmaker) {
+            filtered = filtered.filter(p => p.soft_book === bookmaker);
+        }
+        if (player) {
+            filtered = filtered.filter(p => p.player_name.toLowerCase().includes(player));
+        }
+
+        showingCount.textContent = `Showing ${filtered.length} of ${props.length} props`;
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            noPropsMsg.classList.remove('d-none');
+        } else {
+            noPropsMsg.classList.add('d-none');
+            tbody.innerHTML = filtered.map(prop => {
+                const evClass = prop.sent_ev_percent >= 7 ? 'ev-high' :
+                               prop.sent_ev_percent >= 3 ? 'ev-positive' : '';
+                const oddsClass = prop.sent_odds_american > 0 ? 'positive-odds' : 'negative-odds';
+                const outcomeBadge = prop.outcome === 'Over' 
+                    ? '<span class="badge badge-over">' + prop.outcome + ' ' + prop.line + '</span>'
+                    : '<span class="badge badge-under">' + prop.outcome + ' ' + prop.line + '</span>';
+
+                return `
+                    <tr onclick="viewPropGraph('${prop.event_id}', '${encodeURIComponent(prop.player_name)}', '${prop.prop_type}', ${prop.line})" style="cursor: pointer;" title="Click to view odds movement">
+                        <td><span class="badge bg-dark badge-sport">${utils.getSportName(prop.sport)}</span></td>
+                        <td class="small">${prop.away_team} @ ${prop.home_team}</td>
+                        <td><strong class="player-name">${prop.player_name}</strong></td>
+                        <td><span class="badge badge-prop prop-type-badge">${formatPropType(prop.prop_type)}</span></td>
+                        <td>${outcomeBadge}</td>
+                        <td class="small">${utils.formatBookmaker(prop.soft_book)}</td>
+                        <td class="odds ${oddsClass}">${utils.formatOdds(prop.sent_odds_american)}</td>
+                        <td>${(prop.fair_prob * 100).toFixed(1)}%</td>
+                        <td class="${evClass}">+${prop.sent_ev_percent.toFixed(2)}%</td>
+                        <td>${prop.units.toFixed(2)}</td>
+                        <td class="small text-muted">${utils.formatTimeAgo(prop.sent_at)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        utils.updateLastUpdated();
+    } catch (e) {
+        console.error('Failed to load props:', e);
+        utils.showError(document.getElementById('props-table-body').parentElement.parentElement, 'Failed to load props');
+    } finally {
+        spinner.classList.add('d-none');
+    }
+}
+
+// Event listeners for filters
+document.getElementById('filter-sport').addEventListener('change', loadProps);
+document.getElementById('filter-prop-type').addEventListener('change', loadProps);
+document.getElementById('filter-min-ev').addEventListener('change', loadProps);
+document.getElementById('filter-bookmaker').addEventListener('change', loadProps);
+document.getElementById('filter-player').addEventListener('input', utils.debounce(loadProps, 300));
+
+function viewPropGraph(eventId, playerName, propType, line) {
+    window.location.href = `/prop-graph/${eventId}?player=${playerName}&prop_type=${propType}&line=${line}`;
+}
+
+// Load on page load and refresh every 30 seconds
+loadProps();
+setInterval(loadProps, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+
+{% block title %}Odds Movement - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/ev" class="text-decoration-none" style="color: var(--primary-light);">+EV Plays</a></li>
+                <li class="breadcrumb-item active text-muted">Odds Movement</li>
+            </ol>
+        </nav>
+        <h2 class="mb-1"><i class="bi bi-graph-up me-2" style="color: var(--success-color);"></i>Odds Movement</h2>
+        <p class="text-muted mb-0" id="graph-subtitle">Loading...</p>
+    </div>
+</div>
+
+<!-- Event Info Card -->
+<div class="card mb-4" id="event-info-card" style="border-left: 4px solid var(--success-color);">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-calendar3"></i> <span id="event-title">Game Info</span></h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Matchup</div>
+                <strong id="event-teams">--</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Start Time</div>
+                <strong id="event-time">--</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Market</div>
+                <strong id="event-market">--</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Data Points</div>
+                <strong id="data-points">--</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Line Selection -->
+<div class="card mb-4" id="line-selection-card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-list-check"></i> Select Line to View</h6>
+    </div>
+    <div class="card-body">
+        <div id="line-groups-container">
+            <span class="text-muted">Loading available lines...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Currently Viewing -->
+<div class="alert d-flex align-items-center mb-4" id="viewing-indicator" style="display: none; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: var(--success-color);">
+    <i class="bi bi-eye me-2"></i>
+    <span>Viewing: <strong id="current-view-label">--</strong></span>
+</div>
+
+<!-- Chart Controls -->
+<div class="filter-bar mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+            <label class="form-label">Bookmakers</label>
+            <div id="bookmaker-checkboxes" class="d-flex flex-wrap gap-3">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Odds Format</label>
+            <select class="form-select" id="odds-format">
+                <option value="american">American</option>
+                <option value="decimal">Decimal</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-outline-secondary w-100" id="select-all-books">
+                <i class="bi bi-toggles me-1"></i> Toggle All Books
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Container -->
+<div class="card mb-4">
+    <div class="card-body p-0">
+        <div class="graph-container" style="height: 450px; padding: 1.5rem;">
+    <canvas id="odds-chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Play Info Card -->
+<div class="card" id="play-info-card" style="display: none; border-left: 4px solid var(--primary-light);">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-flag-fill" style="color: var(--primary-light);"></i> Play Sent</h6>
+    </div>
+    <div class="card-body" id="play-details">
+        <!-- Populated if play exists -->
+    </div>
+</div>
+
+<!-- No Data Message -->
+<div id="no-data-message" class="text-center py-5 d-none">
+    <i class="bi bi-graph-down" style="font-size: 4rem; color: var(--text-muted); opacity: 0.3;"></i>
+    <p class="mt-3 text-muted mb-4">No odds history available for this game</p>
+    <a href="/ev" class="btn btn-primary">
+        <i class="bi bi-arrow-left me-1"></i> Back to +EV Plays
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const eventId = "{{ event_id }}";
+const market = "{{ market }}";
+const outcomeFilter = "{{ outcome }}";
+
+let oddsChart = null;
+let chartData = null;
+let currentSelection = null;
+const utils = dashboardUtils;
+
+// Bookmaker colors (soft + sharp + DFS books)
+const BOOK_COLORS = {
+    // Soft books
+    'draftkings': '#53b94e',
+    'fanduel': '#1493ff',
+    'betmgm': '#bfa87d',
+    'caesars': '#0a4d3c',
+    'williamhill_us': '#00385b',
+    'pointsbet_us': '#ff6b00',
+    'fanatics': '#e31837',
+    'bovada': '#d4af37',
+    // Sharp books
+    'pinnacle': '#c41e3a',
+    'betonlineag': '#ff9900',
+    'betfair': '#ffb80c',
+    'circa': '#1a1a2e',
+    'lowvig': '#00a86b',
+    'betanyports': '#8b4513',
+    // DFS (Daily Fantasy Sports) books
+    'prizepicks': '#7c3aed',
+    'underdog': '#f59e0b',
+    'betr_us_dfs': '#06b6d4',
+};
+
+function getBookColor(book) {
+    return BOOK_COLORS[book] || `hsl(${(book.length * 47) % 360}, 65%, 50%)`;
+}
+
+function americanToDecimal(american) {
+    return american > 0 ? (american / 100) + 1 : (100 / Math.abs(american)) + 1;
+}
+
+async function initializeGraph() {
+    try {
+        const params = new URLSearchParams();
+        params.set('market', market);
+
+        const response = await fetch(`/api/odds-history/${eventId}?${params}`);
+        chartData = await response.json();
+
+        // Check if we have data
+        if (!chartData.by_bookmaker || Object.keys(chartData.by_bookmaker).length === 0) {
+            document.getElementById('no-data-message').classList.remove('d-none');
+            document.getElementById('event-info-card').style.display = 'none';
+            document.getElementById('line-selection-card').style.display = 'none';
+            document.querySelector('.filter-bar').style.display = 'none';
+            document.querySelector('.card:has(canvas)').style.display = 'none';
+            return;
+        }
+
+        // Update event info
+        if (chartData.event) {
+            document.getElementById('event-teams').textContent =
+                `${chartData.event.away_team} @ ${chartData.event.home_team}`;
+            document.getElementById('event-time').textContent =
+                new Date(chartData.event.commence_time).toLocaleString();
+            document.getElementById('event-market').textContent = utils.formatMarket(market);
+            document.getElementById('event-title').textContent =
+                `${chartData.event.away_team} @ ${chartData.event.home_team}`;
+            document.getElementById('graph-subtitle').textContent =
+                `${chartData.event.away_team} @ ${chartData.event.home_team} — ${utils.formatMarket(market)}`;
+        }
+
+        document.getElementById('data-points').textContent = chartData.total_snapshots;
+
+        // Parse available lines
+        const lineGroups = parseAvailableLines();
+        buildLineSelectionUI(lineGroups);
+
+        // Build bookmaker checkboxes
+        buildBookmakerCheckboxes(Object.keys(chartData.by_bookmaker));
+
+        // Show play info if exists
+        if (chartData.plays && chartData.plays.length > 0) {
+            showPlayInfo(chartData.plays);
+        }
+
+        // Auto-select first line or use filter
+        if (outcomeFilter) {
+            const btn = document.querySelector(`.line-btn[data-outcome="${outcomeFilter}"]`);
+            if (btn) {
+                const point = btn.dataset.point ? parseFloat(btn.dataset.point) : null;
+                selectLine(outcomeFilter, point);
+            } else {
+                selectFirstLine(lineGroups);
+            }
+        } else {
+            selectFirstLine(lineGroups);
+        }
+
+    } catch (e) {
+        console.error('Failed to load graph data:', e);
+        document.getElementById('graph-subtitle').textContent = 'Failed to load data';
+    }
+}
+
+function parseAvailableLines() {
+    const lineGroups = {};
+
+    Object.values(chartData.by_bookmaker).forEach(snapshots => {
+        snapshots.forEach(snap => {
+            const outcome = snap.outcome;
+            const point = snap.point;
+
+            let groupKey = point !== null && point !== undefined ? `point_${point}` : `outcome_${outcome}`;
+
+            if (!lineGroups[groupKey]) {
+                lineGroups[groupKey] = {
+                    point: point,
+                    outcomes: new Set(),
+                    label: point !== null ? `Line: ${point}` : outcome
+                };
+            }
+            lineGroups[groupKey].outcomes.add(outcome);
+        });
+    });
+
+    return lineGroups;
+}
+
+function buildLineSelectionUI(lineGroups) {
+    const container = document.getElementById('line-groups-container');
+    const hasPoints = Object.values(lineGroups).some(g => g.point !== null);
+
+    if (hasPoints) {
+        const pointValues = [...new Set(Object.values(lineGroups).map(g => g.point))]
+            .filter(p => p !== null).sort((a, b) => a - b);
+
+        let html = '';
+        pointValues.forEach(point => {
+            const groupKey = `point_${point}`;
+            const group = lineGroups[groupKey];
+            if (!group) return;
+
+            const outcomes = Array.from(group.outcomes).sort();
+
+            html += `
+                <div class="line-group mb-3">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="badge bg-dark me-2">Line: ${point}</span>
+                        ${outcomes.map(outcome => `
+                            <button class="btn btn-outline-primary btn-sm line-btn"
+                                    data-outcome="${outcome}" data-point="${point}">
+                                ${outcome}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html || '<span class="text-muted">No lines available</span>';
+    } else {
+        const outcomes = Object.values(lineGroups).map(g => g.label).sort();
+
+        container.innerHTML = `
+            <div class="d-flex flex-wrap gap-2">
+                ${outcomes.map(outcome => `
+                    <button class="btn btn-outline-primary btn-sm line-btn"
+                            data-outcome="${outcome}" data-point="">
+                        ${outcome}
+                    </button>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // Add click handlers
+    container.querySelectorAll('.line-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const outcome = btn.dataset.outcome;
+            const point = btn.dataset.point ? parseFloat(btn.dataset.point) : null;
+            selectLine(outcome, point);
+        });
+    });
+}
+
+function selectLine(outcome, point) {
+    currentSelection = { outcome, point };
+
+    // Update button states
+    document.querySelectorAll('.line-btn').forEach(btn => {
+        const btnOutcome = btn.dataset.outcome;
+        const btnPoint = btn.dataset.point ? parseFloat(btn.dataset.point) : null;
+
+        if (btnOutcome === outcome && btnPoint === point) {
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-primary');
+        } else {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+        }
+    });
+
+    // Update viewing indicator
+    const indicator = document.getElementById('viewing-indicator');
+    indicator.style.display = 'flex';
+    document.getElementById('current-view-label').textContent =
+        point !== null ? `${outcome} ${point}` : outcome;
+
+    buildChart();
+}
+
+function selectFirstLine(lineGroups) {
+    const firstGroup = Object.values(lineGroups)[0];
+    if (firstGroup) {
+        const firstOutcome = Array.from(firstGroup.outcomes)[0];
+        selectLine(firstOutcome, firstGroup.point);
+    }
+}
+
+function buildBookmakerCheckboxes(bookmakers) {
+    const container = document.getElementById('bookmaker-checkboxes');
+
+    container.innerHTML = bookmakers.map(book => `
+        <div class="form-check">
+            <input class="form-check-input book-checkbox" type="checkbox"
+                   id="book-${book}" value="${book}" checked>
+            <label class="form-check-label" for="book-${book}">
+                <span style="color: ${getBookColor(book)}; font-size: 1.1em;">●</span>
+                ${utils.formatBookmaker(book)}
+            </label>
+        </div>
+    `).join('');
+
+    // Add event listeners
+    container.querySelectorAll('.book-checkbox').forEach(cb => {
+        cb.addEventListener('change', buildChart);
+    });
+
+    document.getElementById('select-all-books').addEventListener('click', () => {
+        const checkboxes = document.querySelectorAll('.book-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+        buildChart();
+    });
+
+    document.getElementById('odds-format').addEventListener('change', buildChart);
+}
+
+function showPlayInfo(plays) {
+    const card = document.getElementById('play-info-card');
+    const details = document.getElementById('play-details');
+
+    card.style.display = 'block';
+    details.innerHTML = plays.map(play => `
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Sent At</div>
+                <strong>${new Date(play.sent_at).toLocaleString()}</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Bet</div>
+                <strong>${play.outcome}${play.point ? ' ' + play.point : ''}</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Sent Odds</div>
+                <strong class="${play.sent_odds_american > 0 ? 'text-success' : 'text-danger'}">
+                    ${utils.formatOdds(play.sent_odds_american)}
+                </strong>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small text-uppercase mb-1">Closing Odds</div>
+                <strong>${play.closing_odds_american ? utils.formatOdds(play.closing_odds_american) : '--'}</strong>
+            </div>
+        </div>
+    `).join('<hr class="my-3">');
+}
+
+function buildChart() {
+    if (!currentSelection) return;
+
+    const ctx = document.getElementById('odds-chart').getContext('2d');
+    const selectedBooks = Array.from(document.querySelectorAll('.book-checkbox:checked')).map(cb => cb.value);
+    const oddsFormat = document.getElementById('odds-format').value;
+
+    const datasets = [];
+
+    selectedBooks.forEach(bookmaker => {
+        const snapshots = chartData.by_bookmaker[bookmaker] || [];
+
+        const filtered = snapshots.filter(s => {
+            const outcomeMatch = s.outcome === currentSelection.outcome;
+            const pointMatch = currentSelection.point === null ||
+                (s.point !== null && s.point === currentSelection.point);
+            return outcomeMatch && pointMatch;
+        });
+
+        if (filtered.length === 0) return;
+
+        const points = filtered.map(snap => ({
+            x: new Date(snap.timestamp),
+            y: oddsFormat === 'american' ? snap.odds : americanToDecimal(snap.odds)
+        })).sort((a, b) => a.x - b.x);
+
+        datasets.push({
+            label: utils.formatBookmaker(bookmaker),
+            data: points,
+            borderColor: getBookColor(bookmaker),
+            backgroundColor: getBookColor(bookmaker) + '20',
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 7,
+            fill: false,
+            tension: 0.25,
+        });
+    });
+
+    // Play markers
+    const annotations = {};
+    if (chartData.plays) {
+        chartData.plays.forEach((play, idx) => {
+            const playMatches = play.outcome === currentSelection.outcome &&
+                (currentSelection.point === null || play.point === currentSelection.point);
+
+            if (playMatches) {
+                annotations[`play-${idx}`] = {
+                    type: 'line',
+                    xMin: new Date(play.sent_at),
+                    xMax: new Date(play.sent_at),
+                    borderColor: 'rgba(5, 150, 105, 0.9)',
+                    borderWidth: 3,
+                    borderDash: [6, 4],
+                    label: {
+                        display: true,
+                        content: `Play @ ${utils.formatOdds(play.sent_odds_american)}`,
+                        position: 'start',
+                        backgroundColor: 'rgba(5, 150, 105, 0.9)',
+                        color: '#fff',
+                        font: { size: 11, weight: '600', family: 'Inter' },
+                        padding: 6,
+                        borderRadius: 4
+                    }
+                };
+            }
+        });
+    }
+
+    if (oddsChart) oddsChart.destroy();
+
+    oddsChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'nearest',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'hour',
+                        displayFormats: { hour: 'MMM d, ha' }
+                    },
+                    title: { display: true, text: 'Time', font: { weight: '600', family: 'Inter' }, color: '#94a3b8' },
+                    grid: { color: 'rgba(148, 163, 184, 0.08)', drawBorder: false },
+                    ticks: { color: '#94a3b8', font: { family: 'Inter' } }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: oddsFormat === 'american' ? 'American Odds' : 'Decimal Odds',
+                        font: { weight: '600', family: 'Inter' },
+                        color: '#94a3b8'
+                    },
+                    ticks: {
+                        callback: v => oddsFormat === 'american' ? (v > 0 ? '+' + v : v) : v.toFixed(2),
+                        color: '#94a3b8',
+                        font: { family: 'Inter' }
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.08)', drawBorder: false }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20,
+                        font: { size: 12, family: 'Inter' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    titleFont: { size: 13, weight: '600', family: 'Inter' },
+                    bodyFont: { size: 12, family: 'Inter' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    borderWidth: 1,
+                    callbacks: {
+                        title: ctx => new Date(ctx[0].raw.x).toLocaleString(),
+                        label: ctx => {
+                            const v = ctx.raw.y;
+                            const formatted = oddsFormat === 'american' ? (v > 0 ? '+' + v : v) : v.toFixed(2);
+                            return `${ctx.dataset.label}: ${formatted}`;
+                        }
+                    }
+                },
+                annotation: { annotations }
+            }
+        }
+    });
+}
+
+// Initialize
+initializeGraph();
+</script>
+{% endblock %}

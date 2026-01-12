@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Events - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-calendar-event"></i> Upcoming Events</h2>
+        <p class="text-muted">Browse all active lines and view odds movement</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Sport</label>
+            <select class="form-select form-select-sm" id="filter-sport">
+                <option value="">All Sports</option>
+                <option value="americanfootball_nfl">NFL</option>
+                <option value="americanfootball_ncaaf">NCAAF</option>
+                <option value="basketball_nba">NBA</option>
+                <option value="basketball_ncaab">NCAAB</option>
+                <option value="icehockey_nhl">NHL</option>
+                <option value="baseball_mlb">MLB</option>
+                <option value="soccer">Soccer</option>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">Search</label>
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" class="form-control form-control-sm" id="search-input"
+                       placeholder="Search by team name...">
+            </div>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-outline-primary btn-sm w-100" onclick="loadEvents()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Events List -->
+<div class="row" id="events-container">
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Loading events...</p>
+    </div>
+</div>
+
+<div id="no-events-message" class="text-center py-5 d-none">
+    <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+    <p class="mt-2 text-muted">No upcoming events found</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const utils = dashboardUtils;
+
+async function loadEvents() {
+    const sport = document.getElementById('filter-sport').value;
+    const search = document.getElementById('search-input').value;
+
+    const container = document.getElementById('events-container');
+    const noEventsMsg = document.getElementById('no-events-message');
+
+    container.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Loading events...</p>
+        </div>
+    `;
+
+    try {
+        const params = new URLSearchParams();
+        if (sport) params.set('sport', sport);
+        if (search) params.set('search', search);
+
+        const response = await fetch('/api/upcoming-events?' + params.toString());
+        const events = await response.json();
+
+        if (events.length === 0) {
+            container.innerHTML = '';
+            noEventsMsg.classList.remove('d-none');
+        } else {
+            noEventsMsg.classList.add('d-none');
+            container.innerHTML = events.map(event => {
+                const startTime = new Date(event.commence_time);
+                const timeStr = startTime.toLocaleString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                const marketsHtml = (event.markets || []).map(m =>
+                    `<button class="btn btn-outline-secondary btn-sm me-1 mb-1" onclick="viewGraph('${event.id}', '${m}')">
+                        ${utils.formatMarket(m)}
+                    </button>`
+                ).join('');
+
+                return `
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100 event-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span class="badge bg-secondary badge-sport">${utils.getSportName(event.sport)}</span>
+                                <small class="text-muted">${timeStr}</small>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title mb-3">
+                                    ${event.away_team}<br>
+                                    <small class="text-muted">@</small><br>
+                                    ${event.home_team}
+                                </h5>
+                                <div class="d-flex justify-content-between text-muted mb-3">
+                                    <small><i class="bi bi-building"></i> ${event.bookmaker_count || 0} books</small>
+                                    <small><i class="bi bi-layers"></i> ${event.market_count || 0} markets</small>
+                                </div>
+                                <div class="markets-section">
+                                    <small class="text-muted d-block mb-2">View odds movement:</small>
+                                    ${marketsHtml || '<span class="text-muted">No odds data yet</span>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        utils.updateLastUpdated();
+    } catch (e) {
+        console.error('Failed to load events:', e);
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                <p class="mt-2 text-muted">Failed to load events</p>
+                <button class="btn btn-outline-primary btn-sm" onclick="loadEvents()">
+                    <i class="bi bi-arrow-clockwise"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function viewGraph(eventId, market) {
+    window.location.href = `/graph/${eventId}?market=${market}`;
+}
+
+// Event listeners
+document.getElementById('filter-sport').addEventListener('change', loadEvents);
+document.getElementById('search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') loadEvents();
+});
+
+// Debounced search
+const debouncedSearch = utils.debounce(loadEvents, 300);
+document.getElementById('search-input').addEventListener('input', debouncedSearch);
+
+// Load on page load
+loadEvents();
+</script>
+
+<style>
+.event-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.event-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.event-card .card-title {
+    font-size: 1rem;
+    line-height: 1.4;
+}
+</style>
+{% endblock %}

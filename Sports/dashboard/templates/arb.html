@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Arbitrage - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="mb-1"><i class="bi bi-arrow-left-right me-2" style="color: var(--arb-color);"></i>Arbitrage Opportunities</h2>
+        <p class="text-muted mb-0">Risk-free betting opportunities</p>
+    </div>
+    <div class="col-auto">
+        <span class="refresh-indicator">
+            <span class="spinner-border spinner-border-sm d-none" id="refresh-spinner"></span>
+            Auto-refreshes every 30s
+        </span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Sport</label>
+            <select class="form-select" id="filter-sport">
+                <option value="">All Sports</option>
+                <option value="americanfootball_nfl">NFL</option>
+                <option value="americanfootball_ncaaf">NCAAF</option>
+                <option value="basketball_nba">NBA</option>
+                <option value="basketball_ncaab">NCAAB</option>
+                <option value="icehockey_nhl">NHL</option>
+                <option value="soccer">Soccer</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Min Profit %</label>
+            <select class="form-select" id="filter-min-profit">
+                <option value="0">All</option>
+                <option value="0.5">0.5%+</option>
+                <option value="1" selected>1%+</option>
+                <option value="2">2%+</option>
+                <option value="3">3%+</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Recalculate Stake ($)</label>
+            <input type="number" class="form-control" id="stake-amount" value="100" min="1">
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100" onclick="loadArbs()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Arbs Container -->
+<div id="arbs-container" class="mt-4">
+    <div class="text-center py-5">
+        <div class="spinner-border" role="status" style="color: var(--arb-color);"></div>
+        <p class="mt-3 text-muted mb-0">Loading arbitrage opportunities...</p>
+    </div>
+</div>
+
+<div id="no-arbs-message" class="text-center py-5 d-none">
+    <i class="bi bi-check-circle" style="font-size: 4rem; color: var(--success-color); opacity: 0.5;"></i>
+    <p class="mt-3 text-muted mb-0">No arbitrage opportunities found recently — markets are efficient!</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const utils = dashboardUtils;
+
+function formatOdds(american) {
+    if (american > 0) return '+' + american;
+    return american.toString();
+}
+
+function recalculateStakes(legs, totalStake) {
+    // Calculate implied probabilities
+    const probs = legs.map(leg => {
+        const decimal = leg.odds_decimal;
+        return 1 / decimal;
+    });
+    const totalProb = probs.reduce((a, b) => a + b, 0);
+
+    // Calculate new stakes
+    return legs.map((leg, i) => {
+        const stake = (totalStake * probs[i]) / totalProb;
+        const payout = stake * leg.odds_decimal;
+        return {
+            ...leg,
+            stake: stake,
+            payout: payout
+        };
+    });
+}
+
+async function loadArbs() {
+    const spinner = document.getElementById('refresh-spinner');
+    spinner.classList.remove('d-none');
+
+    const sport = document.getElementById('filter-sport').value;
+    const minProfit = parseFloat(document.getElementById('filter-min-profit').value);
+    const stake = parseFloat(document.getElementById('stake-amount').value) || 100;
+
+    try {
+        const response = await fetch('/api/arb-plays');
+        const arbs = await response.json();
+
+        const container = document.getElementById('arbs-container');
+        const noArbsMsg = document.getElementById('no-arbs-message');
+
+        // Filter
+        let filtered = arbs;
+        if (sport) {
+            filtered = filtered.filter(a => a.sport === sport);
+        }
+        if (minProfit > 0) {
+            filtered = filtered.filter(a => (a.profit_percent || 0) >= minProfit);
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            noArbsMsg.classList.remove('d-none');
+        } else {
+            noArbsMsg.classList.add('d-none');
+            container.innerHTML = filtered.map(arb => {
+                // Recalculate stakes based on user's input
+                const recalcLegs = recalculateStakes(arb.legs || [], stake);
+                const profit = arb.profit_percent || 0;
+                const profitClass = profit >= 3 ? 'ev-high' : (profit >= 2 ? 'ev-positive' : '');
+                const guaranteedReturn = stake * (1 + profit / 100);
+                const guaranteedProfit = guaranteedReturn - stake;
+
+                // Build legs HTML
+                const legsHtml = recalcLegs.map((leg, i) => `
+                    <div class="leg-row d-flex justify-content-between align-items-center py-3 ${i > 0 ? 'border-top' : ''}">
+                        <div class="d-flex align-items-center">
+                            <span class="badge badge-arb me-2">Leg ${i + 1}</span>
+                            <strong>${leg.outcome}</strong>
+                            ${leg.point !== null ? `<span class="text-muted ms-1">(${leg.point > 0 ? '+' : ''}${leg.point})</span>` : ''}
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-dark">${leg.bookmaker.toUpperCase()}</span>
+                            <span class="odds ${leg.odds_american > 0 ? 'positive-odds' : 'negative-odds'}">${formatOdds(leg.odds_american)}</span>
+                            <span class="text-muted">Stake: <strong class="text-white">$${leg.stake.toFixed(2)}</strong></span>
+                        </div>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="card mb-4 arb-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-dark badge-sport">${utils.getSportName(arb.sport || '')}</span>
+                                <strong>${arb.away_team || ''} @ ${arb.home_team || ''}</strong>
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="${profitClass} fw-bold">+${profit.toFixed(2)}% Profit</span>
+                                <small class="text-muted">${utils.formatTimeAgo(arb.sent_at)}</small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4 text-center">
+                                <div class="col-md-4">
+                                    <small class="text-muted text-uppercase">Market</small>
+                                    <div class="fw-semibold mt-1">${utils.formatMarket(arb.market)}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted text-uppercase">Total Stake</small>
+                                    <div class="fw-semibold mt-1">$${stake.toFixed(2)}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted text-uppercase">Guaranteed Return</small>
+                                    <div class="text-success fw-bold mt-1">$${guaranteedReturn.toFixed(2)} <small class="text-muted fw-normal">(+$${guaranteedProfit.toFixed(2)})</small></div>
+                                </div>
+                            </div>
+
+                            <div class="legs-container">
+                                ${legsHtml}
+                            </div>
+
+                            <div class="mt-4 text-end">
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewGraph('${arb.event_id}', '${arb.market}')">
+                                    <i class="bi bi-graph-up me-1"></i> View Odds Movement
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        utils.updateLastUpdated();
+    } catch (e) {
+        console.error('Failed to load arbs:', e);
+        document.getElementById('arbs-container').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i> Failed to load arbitrage data. Please try again.
+            </div>
+        `;
+    } finally {
+        spinner.classList.add('d-none');
+    }
+}
+
+function viewGraph(eventId, market) {
+    window.location.href = `/graph/${eventId}?market=${market}`;
+}
+
+// Event listeners
+document.getElementById('filter-sport').addEventListener('change', loadArbs);
+document.getElementById('filter-min-profit').addEventListener('change', loadArbs);
+document.getElementById('stake-amount').addEventListener('change', loadArbs);
+
+// Load on page load and refresh
+loadArbs();
+setInterval(loadArbs, 30000);
+</script>
+
+<style>
+.arb-card {
+    border-left: 4px solid var(--arb-color);
+}
+.arb-card .card-header {
+    border-bottom: 1px solid var(--border-color);
+}
+.legs-container {
+    background: var(--bg-glass);
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+}
+.leg-row {
+    font-size: 0.95rem;
+}
+.leg-row .border-top {
+    border-color: var(--border-color) !important;
+}
+</style>
+{% endblock %}

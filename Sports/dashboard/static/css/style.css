@@ -1,0 +1,843 @@
+/* Sports Betting Dashboard - Modern Design */
+
+/* ============================================
+   CUSTOM PROPERTIES (CSS Variables)
+   ============================================ */
+:root {
+    /* Primary color palette - Rich emerald/teal theme */
+    --primary-gradient: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0891b2 100%);
+    --primary-color: #059669;
+    --primary-dark: #047857;
+    --primary-light: #10b981;
+    
+    /* Accent colors */
+    --accent-gold: #f59e0b;
+    --accent-amber: #fbbf24;
+    --accent-purple: #8b5cf6;
+    
+    /* Status colors */
+    --success-color: #22c55e;
+    --success-gradient: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    --danger-color: #ef4444;
+    --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    --warning-color: #f59e0b;
+    --info-color: #06b6d4;
+    
+    /* Play type colors */
+    --ev-color: #22c55e;
+    --prop-color: #8b5cf6;
+    --arb-color: #06b6d4;
+    
+    /* Over/Under */
+    --over-color: #3b82f6;
+    --under-color: #6366f1;
+    
+    /* Dark theme background */
+    --bg-base: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-elevated: #334155;
+    --bg-card: rgba(30, 41, 59, 0.8);
+    --bg-glass: rgba(30, 41, 59, 0.6);
+    
+    /* Text colors */
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    
+    /* Borders */
+    --border-color: rgba(148, 163, 184, 0.1);
+    --border-glow: rgba(5, 150, 105, 0.3);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 20px rgba(5, 150, 105, 0.15);
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s ease;
+    --transition-slow: 0.4s ease;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-base);
+    background-image: 
+        radial-gradient(ellipse at 20% 0%, rgba(5, 150, 105, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+main {
+    flex: 1;
+}
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+.navbar {
+    background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow-md);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.3rem;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+}
+
+.navbar-brand i {
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.nav-link {
+    padding: 0.6rem 1rem !important;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text-secondary) !important;
+    transition: all var(--transition-fast);
+    border-radius: 8px;
+    margin: 0 2px;
+}
+
+.nav-link:hover {
+    color: var(--text-primary) !important;
+    background: rgba(5, 150, 105, 0.1);
+}
+
+.nav-link.active {
+    color: var(--primary-light) !important;
+    background: rgba(5, 150, 105, 0.15);
+}
+
+.nav-link i {
+    margin-right: 6px;
+    font-size: 1rem;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+.card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-normal);
+}
+
+.card:hover {
+    border-color: var(--border-glow);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.25rem;
+}
+
+.card-header h5 {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.card-header h5 i {
+    color: var(--primary-light);
+    margin-right: 8px;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* ============================================
+   STAT CARDS (Dashboard)
+   ============================================ */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    transition: all var(--transition-normal);
+    border: 1px solid var(--border-color);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary-gradient);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+/* Colored stat cards */
+.stat-card.bg-primary {
+    background: linear-gradient(135deg, rgba(5, 150, 105, 0.2) 0%, rgba(13, 148, 136, 0.15) 100%) !important;
+    border-color: rgba(5, 150, 105, 0.3);
+}
+
+.stat-card.bg-info {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(14, 165, 233, 0.15) 100%) !important;
+    border-color: rgba(6, 182, 212, 0.3);
+}
+
+.stat-card.bg-success {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.15) 100%) !important;
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.stat-card.bg-warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.15) 100%) !important;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.stat-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+.table-plays {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+}
+
+.table-plays thead th {
+    background: var(--bg-elevated);
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    padding: 0.875rem 0.75rem;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.table-plays tbody tr {
+    transition: all var(--transition-fast);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table-plays tbody tr:hover {
+    background: rgba(5, 150, 105, 0.08);
+}
+
+.table-plays tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border: none;
+}
+
+.table-plays .odds {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.table-plays .positive-odds {
+    color: var(--success-color);
+}
+
+.table-plays .negative-odds {
+    color: var(--danger-color);
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+.badge {
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+    padding: 0.35em 0.7em;
+    border-radius: 6px;
+}
+
+.badge-ev, .badge.bg-success {
+    background: var(--success-gradient) !important;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
+}
+
+.badge-prop, .badge.bg-info {
+    background: linear-gradient(135deg, var(--prop-color) 0%, #7c3aed 100%) !important;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
+}
+
+.badge-arb {
+    background: linear-gradient(135deg, var(--arb-color) 0%, #0891b2 100%) !important;
+}
+
+.badge.bg-dark {
+    background: var(--bg-elevated) !important;
+    color: var(--text-secondary);
+}
+
+.badge-sport {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* EV styling */
+.ev-positive {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.ev-high {
+    color: #4ade80;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+}
+
+/* ============================================
+   FILTER BAR
+   ============================================ */
+.filter-bar {
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-bar .form-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+}
+
+.filter-bar .form-control,
+.filter-bar .form-select {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    border-radius: 8px;
+    transition: all var(--transition-fast);
+}
+
+.filter-bar .form-control:focus,
+.filter-bar .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    background: var(--bg-elevated);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn-primary {
+    background: var(--primary-gradient);
+    border: none;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    transition: all var(--transition-fast);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.btn-outline-primary {
+    border: 1px solid var(--primary-color);
+    color: var(--primary-light);
+    background: transparent;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.btn-outline-primary:hover {
+    background: rgba(5, 150, 105, 0.15);
+    border-color: var(--primary-light);
+    color: var(--primary-light);
+}
+
+.btn-outline-secondary {
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: var(--bg-elevated);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
+.btn-success {
+    background: var(--success-gradient);
+    border: none;
+}
+
+.btn-danger {
+    background: var(--danger-gradient);
+    border: none;
+}
+
+.btn-outline-warning {
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+.btn-outline-warning:hover {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: var(--accent-amber);
+    color: var(--accent-amber);
+}
+
+/* Result buttons */
+.btn-result {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+/* ============================================
+   GRAPH CONTAINER
+   ============================================ */
+.graph-container {
+    background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(30, 41, 59, 0.6) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    min-height: 400px;
+}
+
+/* ============================================
+   RESULT BADGES
+   ============================================ */
+.result-win, .btn.btn-success:not(.btn-lg) {
+    background: var(--success-gradient) !important;
+}
+
+.result-loss, .btn.btn-danger:not(.btn-lg) {
+    background: var(--danger-gradient) !important;
+}
+
+.result-push {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+}
+
+.result-pending {
+    background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
+    color: #000;
+}
+
+/* ============================================
+   SETTINGS
+   ============================================ */
+.settings-section {
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.settings-section h5 {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+/* ============================================
+   SEARCH BOX
+   ============================================ */
+.search-box {
+    position: relative;
+}
+
+.search-box .bi-search {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.search-box input {
+    padding-left: 40px;
+}
+
+/* ============================================
+   MODALS
+   ============================================ */
+.modal-content {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-title {
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+/* ============================================
+   PAGINATION
+   ============================================ */
+.pagination .page-link {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    padding: 0.4rem 0.75rem;
+    transition: all var(--transition-fast);
+}
+
+.pagination .page-link:hover {
+    background: var(--bg-elevated);
+    border-color: var(--primary-color);
+    color: var(--primary-light);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--primary-gradient);
+    border-color: transparent;
+}
+
+.pagination .page-item.disabled .page-link {
+    background: var(--bg-base);
+    color: var(--text-muted);
+}
+
+/* ============================================
+   TOAST
+   ============================================ */
+.toast {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.toast-header {
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+footer.footer {
+    background: var(--bg-surface) !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+/* ============================================
+   STATUS INDICATORS
+   ============================================ */
+.status-running {
+    color: var(--success-color);
+}
+
+.status-stopped {
+    color: var(--danger-color);
+}
+
+.status-warning {
+    color: var(--warning-color);
+}
+
+#collector-status {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 20px;
+}
+
+/* ============================================
+   REFRESH INDICATOR
+   ============================================ */
+.refresh-indicator {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg-glass);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.refresh-indicator .spinner-border {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+}
+
+/* ============================================
+   TOOLTIPS
+   ============================================ */
+.tooltip-inner {
+    max-width: 300px;
+    text-align: left;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* ============================================
+   FORM SWITCH (Dark Mode Toggle)
+   ============================================ */
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* ============================================
+   PLAYER PROPS SPECIFIC
+   ============================================ */
+.badge-over {
+    background: linear-gradient(135deg, var(--over-color) 0%, #2563eb 100%) !important;
+}
+
+.badge-under {
+    background: linear-gradient(135deg, var(--under-color) 0%, #4f46e5 100%) !important;
+}
+
+.prop-type-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.player-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.line-badge {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* Row highlight animation */
+.table-plays tbody tr.new-prop {
+    animation: highlightRow 2s ease-out;
+}
+
+@keyframes highlightRow {
+    0% {
+        background-color: rgba(139, 92, 246, 0.25);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Mini profit chart */
+.mini-chart-container {
+    height: 100px;
+}
+
+/* ============================================
+   TEXT UTILITIES
+   ============================================ */
+.text-success {
+    color: var(--success-color) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.text-warning {
+    color: var(--warning-color) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
+
+/* Display numbers (Record section) */
+.display-6 {
+    font-weight: 700;
+    font-size: 2rem;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+@media (max-width: 992px) {
+    .stat-value {
+        font-size: 1.75rem;
+    }
+    
+    .table-plays .small-hide {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .table-plays {
+        font-size: 0.8rem;
+    }
+
+    .filter-bar {
+        padding: 1rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .filter-bar .col-6 {
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.25rem;
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.65rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: 16px;
+}
+
+.spinner-border {
+    color: var(--primary-light);
+}
+
+/* ============================================
+   LIGHT MODE OVERRIDES
+   ============================================ */
+[data-bs-theme="light"] {
+    --bg-base: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-elevated: #f1f5f9;
+    --bg-card: rgba(255, 255, 255, 0.9);
+    --bg-glass: rgba(255, 255, 255, 0.7);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --border-color: rgba(15, 23, 42, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.07);
+}
+
+[data-bs-theme="light"] body {
+    background-image: 
+        radial-gradient(ellipse at 20% 0%, rgba(5, 150, 105, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
+}
+
+[data-bs-theme="light"] .navbar {
+    background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+}
+
+[data-bs-theme="light"] .filter-bar .form-control,
+[data-bs-theme="light"] .filter-bar .form-select {
+    background: var(--bg-elevated);
+}
+
+[data-bs-theme="light"] .table-plays thead th {
+    background: var(--bg-elevated);
+}
+
+[data-bs-theme="light"] .table-plays tbody tr:hover {
+    background: rgba(5, 150, 105, 0.05);
+}
+
+[data-bs-theme="light"] .pagination .page-link {
+    background: var(--bg-surface);
+}

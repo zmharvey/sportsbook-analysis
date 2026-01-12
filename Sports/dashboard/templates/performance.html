@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+
+{% block title %}Performance - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="mb-1"><i class="bi bi-bar-chart me-2" style="color: var(--primary-light);"></i>Performance</h2>
+        <p class="text-muted mb-0">CLV breakdown by bookmaker, sport, play type, and more</p>
+    </div>
+    <div class="col-auto">
+        <span class="refresh-indicator">
+            <span class="spinner-border spinner-border-sm d-none" id="refresh-spinner"></span>
+            Auto-refreshes every 60s
+        </span>
+    </div>
+</div>
+
+<!-- Overall Stats -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Overall CLV</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center" id="overall-stats">
+                    <div class="col-md-4">
+                        <div class="display-6 fw-bold" id="overall-avg-clv">--%</div>
+                        <div class="text-muted small">Avg CLV</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="display-6 fw-bold" id="overall-clv-rate">--%</div>
+                        <div class="text-muted small">Beat Close Rate</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="display-6 fw-bold" id="overall-plays">--</div>
+                        <div class="text-muted small">Total Plays</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- By Bookmaker -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-building me-2"></i>CLV by Bookmaker</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Bookmaker</th>
+                                <th>Avg CLV</th>
+                                <th>Beat Close Rate</th>
+                                <th>Plays</th>
+                                <th>Total Units</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookmaker-table">
+                            <tr>
+                                <td colspan="5" class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">Loading...</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- By Sport -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-trophy me-2"></i>CLV by Sport</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Sport</th>
+                                <th>Avg CLV</th>
+                                <th>Beat Close Rate</th>
+                                <th>Plays</th>
+                                <th>Total Units</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sport-table">
+                            <tr>
+                                <td colspan="5" class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">Loading...</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- By Play Type -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>CLV by Play Type</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Play Type</th>
+                                <th>Avg CLV</th>
+                                <th>Beat Close Rate</th>
+                                <th>Plays</th>
+                                <th>Total Units</th>
+                            </tr>
+                        </thead>
+                        <tbody id="play-type-table">
+                            <tr>
+                                <td colspan="5" class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">Loading...</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- By Prop Type -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>CLV by Prop Type</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Prop Type</th>
+                                <th>Avg CLV</th>
+                                <th>Beat Close Rate</th>
+                                <th>Plays</th>
+                                <th>Total Units</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prop-type-table">
+                            <tr>
+                                <td colspan="5" class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">Loading...</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- By Sport + Play Type -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>CLV by Sport & Play Type</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Sport</th>
+                                <th>Play Type</th>
+                                <th>Avg CLV</th>
+                                <th>Beat Close Rate</th>
+                                <th>Plays</th>
+                                <th>Total Units</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sport-play-type-table">
+                            <tr>
+                                <td colspan="6" class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">Loading...</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const utils = dashboardUtils;
+
+// Prop type display names
+const propTypeNames = {
+    'player_points': 'Points',
+    'player_rebounds': 'Rebounds',
+    'player_assists': 'Assists',
+    'player_threes': '3-Pointers',
+    'player_points_rebounds_assists': 'PRA',
+    'player_pass_yds': 'Pass Yds',
+    'player_rush_yds': 'Rush Yds',
+    'player_reception_yds': 'Rec Yds',
+    'player_receptions': 'Receptions',
+    'player_anytime_td': 'Anytime TD',
+    'batter_hits': 'Hits',
+    'pitcher_strikeouts': 'Strikeouts',
+    'player_goals': 'Goals',
+    'player_shots_on_goal': 'SOG',
+    'player_total_shots': 'Total Shots',
+    'player_total_tackles': 'Tackles',
+    'player_total_cards': 'Cards',
+    'player_goal_scorer_anytime': 'Anytime Scorer',
+};
+
+function formatPropType(propType) {
+    return propTypeNames[propType] || propType?.replace('player_', '').replace('batter_', '').replace('pitcher_', '').replace(/_/g, ' ') || propType;
+}
+
+function formatStatValue(value, isPercent = false) {
+    if (value === null || value === undefined) return '--';
+    const sign = value >= 0 ? '+' : '';
+    return sign + value.toFixed(2) + (isPercent ? '%' : '');
+}
+
+function formatStatClass(value) {
+    if (value === null || value === undefined) return '';
+    return value >= 0 ? 'text-success' : 'text-danger';
+}
+
+function renderTableRow(data, columns) {
+    return `<tr>
+        ${columns.map(col => {
+            const value = data[col.key];
+            const formatted = col.format ? col.format(value) : value;
+            const className = col.class ? col.class(value) : '';
+            return `<td class="${className}">${formatted}</td>`;
+        }).join('')}
+    </tr>`;
+}
+
+async function loadPerformanceData() {
+    try {
+        const spinner = document.getElementById('refresh-spinner');
+        spinner?.classList.remove('d-none');
+        
+        const response = await fetch('/api/clv-breakdown');
+        const data = await response.json();
+
+        // Overall stats
+        const overall = data.overall;
+        const overallAvgClv = document.getElementById('overall-avg-clv');
+        const overallClvRate = document.getElementById('overall-clv-rate');
+        const overallPlays = document.getElementById('overall-plays');
+        
+        overallAvgClv.textContent = formatStatValue(overall.avg_clv, true);
+        overallAvgClv.className = `display-6 fw-bold ${formatStatClass(overall.avg_clv)}`;
+        overallClvRate.textContent = formatStatValue(overall.positive_clv_rate, true);
+        overallPlays.textContent = overall.plays_count;
+
+        // By bookmaker
+        const bookmakerTable = document.getElementById('bookmaker-table');
+        const bookmakerEntries = Object.entries(data.by_bookmaker || {})
+            .sort((a, b) => b[1].avg_clv - a[1].avg_clv);
+        
+        if (bookmakerEntries.length === 0) {
+            bookmakerTable.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No data available</td></tr>';
+        } else {
+            bookmakerTable.innerHTML = bookmakerEntries.map(([book, stats]) => {
+                return renderTableRow({
+                    bookmaker: utils.formatBookmaker(book),
+                    avg_clv: stats.avg_clv,
+                    positive_clv_rate: stats.positive_clv_rate,
+                    plays_count: stats.plays_count,
+                    total_units: stats.total_units,
+                }, [
+                    { key: 'bookmaker' },
+                    { key: 'avg_clv', format: (v) => formatStatValue(v, true), class: formatStatClass },
+                    { key: 'positive_clv_rate', format: (v) => formatStatValue(v, true) },
+                    { key: 'plays_count' },
+                    { key: 'total_units', format: (v) => v.toFixed(2) },
+                ]);
+            }).join('');
+        }
+
+        // By sport
+        const sportTable = document.getElementById('sport-table');
+        const sportEntries = Object.entries(data.by_sport || {})
+            .sort((a, b) => b[1].avg_clv - a[1].avg_clv);
+        
+        if (sportEntries.length === 0) {
+            sportTable.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No data available</td></tr>';
+        } else {
+            sportTable.innerHTML = sportEntries.map(([sport, stats]) => {
+                return renderTableRow({
+                    sport: utils.getSportName(sport),
+                    avg_clv: stats.avg_clv,
+                    positive_clv_rate: stats.positive_clv_rate,
+                    plays_count: stats.plays_count,
+                    total_units: stats.total_units,
+                }, [
+                    { key: 'sport' },
+                    { key: 'avg_clv', format: (v) => formatStatValue(v, true), class: formatStatClass },
+                    { key: 'positive_clv_rate', format: (v) => formatStatValue(v, true) },
+                    { key: 'plays_count' },
+                    { key: 'total_units', format: (v) => v.toFixed(2) },
+                ]);
+            }).join('');
+        }
+
+        // By play type
+        const playTypeTable = document.getElementById('play-type-table');
+        const playTypeEntries = Object.entries(data.by_play_type || {})
+            .sort((a, b) => b[1].avg_clv - a[1].avg_clv);
+        
+        if (playTypeEntries.length === 0) {
+            playTypeTable.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No data available</td></tr>';
+        } else {
+            playTypeTable.innerHTML = playTypeEntries.map(([playType, stats]) => {
+                return renderTableRow({
+                    play_type: playType === 'ev' ? 'EV Plays' : playType === 'prop' ? 'Props' : playType,
+                    avg_clv: stats.avg_clv,
+                    positive_clv_rate: stats.positive_clv_rate,
+                    plays_count: stats.plays_count,
+                    total_units: stats.total_units,
+                }, [
+                    { key: 'play_type' },
+                    { key: 'avg_clv', format: (v) => formatStatValue(v, true), class: formatStatClass },
+                    { key: 'positive_clv_rate', format: (v) => formatStatValue(v, true) },
+                    { key: 'plays_count' },
+                    { key: 'total_units', format: (v) => v.toFixed(2) },
+                ]);
+            }).join('');
+        }
+
+        // By prop type
+        const propTypeTable = document.getElementById('prop-type-table');
+        const propTypeEntries = Object.entries(data.by_prop_type || {})
+            .sort((a, b) => b[1].avg_clv - a[1].avg_clv);
+        
+        if (propTypeEntries.length === 0) {
+            propTypeTable.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No data available</td></tr>';
+        } else {
+            propTypeTable.innerHTML = propTypeEntries.map(([propType, stats]) => {
+                return renderTableRow({
+                    prop_type: formatPropType(propType),
+                    avg_clv: stats.avg_clv,
+                    positive_clv_rate: stats.positive_clv_rate,
+                    plays_count: stats.plays_count,
+                    total_units: stats.total_units,
+                }, [
+                    { key: 'prop_type' },
+                    { key: 'avg_clv', format: (v) => formatStatValue(v, true), class: formatStatClass },
+                    { key: 'positive_clv_rate', format: (v) => formatStatValue(v, true) },
+                    { key: 'plays_count' },
+                    { key: 'total_units', format: (v) => v.toFixed(2) },
+                ]);
+            }).join('');
+        }
+
+        // By sport + play type
+        const sportPlayTypeTable = document.getElementById('sport-play-type-table');
+        const sportPlayTypeEntries = Object.entries(data.by_sport_play_type || {})
+            .sort((a, b) => b[1].avg_clv - a[1].avg_clv);
+        
+        if (sportPlayTypeEntries.length === 0) {
+            sportPlayTypeTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No data available</td></tr>';
+        } else {
+            sportPlayTypeTable.innerHTML = sportPlayTypeEntries.map(([key, stats]) => {
+                const [sport, playType] = key.split('_');
+                return renderTableRow({
+                    sport: utils.getSportName(sport),
+                    play_type: playType === 'ev' ? 'EV Plays' : playType === 'prop' ? 'Props' : playType,
+                    avg_clv: stats.avg_clv,
+                    positive_clv_rate: stats.positive_clv_rate,
+                    plays_count: stats.plays_count,
+                    total_units: stats.total_units,
+                }, [
+                    { key: 'sport' },
+                    { key: 'play_type' },
+                    { key: 'avg_clv', format: (v) => formatStatValue(v, true), class: formatStatClass },
+                    { key: 'positive_clv_rate', format: (v) => formatStatValue(v, true) },
+                    { key: 'plays_count' },
+                    { key: 'total_units', format: (v) => v.toFixed(2) },
+                ]);
+            }).join('');
+        }
+
+        utils.updateLastUpdated();
+    } catch (e) {
+        console.error('Failed to load performance data:', e);
+    } finally {
+        const spinner = document.getElementById('refresh-spinner');
+        spinner?.classList.add('d-none');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadPerformanceData();
+    
+    // Auto-refresh every 60 seconds
+    setInterval(() => {
+        loadPerformanceData();
+    }, 60000);
+});
+</script>
+{% endblock %}

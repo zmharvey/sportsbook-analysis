@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}+EV Plays - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="mb-1"><i class="bi bi-lightning-charge me-2" style="color: var(--success-color);"></i>+EV Plays</h2>
+        <p class="text-muted mb-0">Positive expected value game line opportunities</p>
+    </div>
+    <div class="col-auto">
+        <span class="refresh-indicator">
+            <span class="spinner-border spinner-border-sm d-none" id="refresh-spinner"></span>
+            Auto-refreshes every 30s
+        </span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Sport</label>
+            <select class="form-select" id="filter-sport">
+                <option value="">All Sports</option>
+                <option value="americanfootball_nfl">NFL</option>
+                <option value="americanfootball_ncaaf">NCAAF</option>
+                <option value="basketball_nba">NBA</option>
+                <option value="basketball_ncaab">NCAAB</option>
+                <option value="icehockey_nhl">NHL</option>
+                <option value="baseball_mlb">MLB</option>
+                <option value="soccer">Soccer</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Min EV %</label>
+            <select class="form-select" id="filter-min-ev">
+                <option value="0">All</option>
+                <option value="1" selected>1%+</option>
+                <option value="2">2%+</option>
+                <option value="3">3%+</option>
+                <option value="5">5%+</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Bookmaker</label>
+            <select class="form-select" id="filter-bookmaker">
+                <option value="">All Books</option>
+                <option value="draftkings">DraftKings</option>
+                <option value="fanduel">FanDuel</option>
+                <option value="betmgm">BetMGM</option>
+                <option value="caesars">Caesars</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100" onclick="loadPlays()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Plays Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-plays table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Sport</th>
+                    <th>Game</th>
+                    <th>Market</th>
+                    <th>Bet</th>
+                    <th>Book</th>
+                    <th>Odds</th>
+                    <th title="Fair probability from sharp book consensus">Fair Prob</th>
+                    <th>EV</th>
+                    <th>Units</th>
+                    <th>Sent</th>
+                </tr>
+            </thead>
+            <tbody id="plays-table-body">
+                <tr>
+                    <td colspan="10" class="text-center py-5">
+                        <div class="spinner-border" role="status" style="color: var(--primary-light);"></div>
+                        <p class="mt-3 text-muted mb-0">Loading plays...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="no-plays-message" class="text-center py-5 d-none">
+    <i class="bi bi-inbox" style="font-size: 4rem; color: var(--text-muted); opacity: 0.3;"></i>
+    <p class="mt-3 text-muted mb-0">No +EV plays found matching your filters</p>
+</div>
+
+<div class="text-muted small mt-3" id="showing-count"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const utils = dashboardUtils;
+
+async function loadPlays() {
+    const spinner = document.getElementById('refresh-spinner');
+    spinner.classList.remove('d-none');
+
+    const sport = document.getElementById('filter-sport').value;
+    const minEv = document.getElementById('filter-min-ev').value;
+    const bookmaker = document.getElementById('filter-bookmaker').value;
+
+    try {
+        const response = await fetch('/api/ev-plays');
+        const plays = await response.json();
+
+        const tbody = document.getElementById('plays-table-body');
+        const noPlaysMsg = document.getElementById('no-plays-message');
+        const showingCount = document.getElementById('showing-count');
+
+        // Filter client-side
+        let filtered = plays;
+
+        if (sport) {
+            filtered = filtered.filter(p => p.sport === sport);
+        }
+
+        const minEvNum = parseFloat(minEv) || 0;
+        if (minEvNum > 0) {
+            filtered = filtered.filter(p => p.sent_ev_percent >= minEvNum);
+        }
+
+        if (bookmaker) {
+            filtered = filtered.filter(p => p.soft_book === bookmaker);
+        }
+
+        showingCount.textContent = `Showing ${filtered.length} of ${plays.length} plays`;
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            noPlaysMsg.classList.remove('d-none');
+        } else {
+            noPlaysMsg.classList.add('d-none');
+            tbody.innerHTML = filtered.map(play => {
+                const evClass = play.sent_ev_percent >= 5 ? 'ev-high' :
+                               play.sent_ev_percent >= 1 ? 'ev-positive' : '';
+                const oddsClass = play.sent_odds_american > 0 ? 'positive-odds' : 'negative-odds';
+
+                return `
+                    <tr onclick="viewGraph('${play.event_id}', '${play.market}', '${play.outcome}')" style="cursor: pointer;">
+                        <td><span class="badge bg-dark badge-sport">${utils.getSportName(play.sport)}</span></td>
+                        <td>${play.away_team} @ ${play.home_team}</td>
+                        <td>${utils.formatMarket(play.market)}${play.point ? ' ' + play.point : ''}</td>
+                        <td><strong>${play.outcome}</strong></td>
+                        <td>${utils.formatBookmaker(play.soft_book)}</td>
+                        <td class="odds ${oddsClass}">${utils.formatOdds(play.sent_odds_american)}</td>
+                        <td>${(play.fair_prob * 100).toFixed(1)}%</td>
+                        <td class="${evClass}">+${play.sent_ev_percent.toFixed(2)}%</td>
+                        <td>${play.units.toFixed(2)}</td>
+                        <td class="small text-muted">${utils.formatTimeAgo(play.sent_at)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        utils.updateLastUpdated();
+    } catch (e) {
+        console.error('Failed to load plays:', e);
+        utils.showError(document.getElementById('plays-table-body').parentElement.parentElement, 'Failed to load plays');
+    } finally {
+        spinner.classList.add('d-none');
+    }
+}
+
+function viewGraph(eventId, market, outcome) {
+    window.location.href = `/graph/${eventId}?market=${market}&outcome=${encodeURIComponent(outcome)}`;
+}
+
+// Event listeners for filters
+document.getElementById('filter-sport').addEventListener('change', loadPlays);
+document.getElementById('filter-min-ev').addEventListener('change', loadPlays);
+document.getElementById('filter-bookmaker').addEventListener('change', loadPlays);
+
+// Load on page load and refresh every 30 seconds
+loadPlays();
+setInterval(loadPlays, 30000);
+</script>
+{% endblock %}

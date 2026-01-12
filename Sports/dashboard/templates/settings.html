@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Sports Betting Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-gear"></i> Settings</h2>
+        <p class="text-muted">Configure collector and detection thresholds</p>
+    </div>
+</div>
+
+<form id="settings-form">
+    <div class="row">
+        <!-- EV Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-plus-circle"></i> +EV Detection</h5>
+                <div class="mb-3">
+                    <label class="form-label">Minimum EV %</label>
+                    <input type="number" class="form-control" id="min-ev" step="0.1" min="0" max="100">
+                    <div class="form-text">Only alert on plays with EV above this threshold</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Maximum EV %</label>
+                    <input type="number" class="form-control" id="max-ev" step="0.1" min="0" max="100">
+                    <div class="form-text">Filter out suspicious plays above this threshold</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Sharp Bookmaker</label>
+                    <select class="form-select" id="sharp-book">
+                        <option value="pinnacle">Pinnacle</option>
+                        <option value="betfair">Betfair</option>
+                        <option value="circa">Circa</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Devig Method</label>
+                    <select class="form-select" id="devig-method">
+                        <option value="power">Power (Recommended)</option>
+                        <option value="multiplicative">Multiplicative</option>
+                        <option value="additive">Additive</option>
+                        <option value="shin">Shin</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arbitrage Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-shuffle"></i> Arbitrage Detection</h5>
+                <div class="mb-3">
+                    <label class="form-label">Minimum Profit %</label>
+                    <input type="number" class="form-control" id="min-profit" step="0.1" min="0" max="100">
+                    <div class="form-text">Only alert on arbs with profit above this threshold</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Maximum Profit %</label>
+                    <input type="number" class="form-control" id="max-profit" step="0.1" min="0" max="100">
+                    <div class="form-text">Filter out suspicious arbs above this threshold</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collector Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-clock"></i> Collector Settings</h5>
+                <div class="mb-3">
+                    <label class="form-label">Peak Hours Start (24-hour format)</label>
+                    <input type="number" class="form-control" id="peak-hours-start" min="0" max="23">
+                    <div class="form-text">Hour when peak hours begin (0-23, e.g., 12 for 12pm)</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Peak Hours End (24-hour format)</label>
+                    <input type="number" class="form-control" id="peak-hours-end" min="0" max="23">
+                    <div class="form-text">Hour when peak hours end (0-23, e.g., 22 for 10pm)</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Peak Hours Interval (seconds)</label>
+                    <input type="number" class="form-control" id="poll-peak" min="60" max="3600">
+                    <div class="form-text">Polling interval during peak hours</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Off-Peak Interval (seconds)</label>
+                    <input type="number" class="form-control" id="poll-offpeak" min="60" max="7200">
+                    <div class="form-text">Polling interval during off-peak hours</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-bell"></i> Alert Settings</h5>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="alert-ev">
+                    <label class="form-check-label" for="alert-ev">Enable +EV Game Line Alerts</label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="alert-prop-ev">
+                    <label class="form-check-label" for="alert-prop-ev">Enable +EV Player Prop Alerts</label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="alert-arb">
+                    <label class="form-check-label" for="alert-arb">Enable Arbitrage Alerts</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Props Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-person-circle"></i> Player Props Settings</h5>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="enable-player-props">
+                    <label class="form-check-label" for="enable-player-props">Enable Player Props Collection</label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Props Window (hours before game)</label>
+                    <input type="number" class="form-control" id="prop-hours-before" min="1" max="168">
+                    <div class="form-text">Only fetch props for games starting within this many hours (e.g., 12 for 12-hour window)</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Max Props Events Per Cycle</label>
+                    <input type="number" class="form-control" id="max-prop-events" min="0" max="100">
+                    <div class="form-text">Maximum events to fetch props for each cycle (0 = unlimited)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Retention Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-database"></i> Data Retention</h5>
+                <div class="mb-3">
+                    <label class="form-label">Data Retention (days)</label>
+                    <input type="number" class="form-control" id="data-retention-days" min="1" max="365">
+                    <div class="form-text">How many days to keep historical data in the database</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sports -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-trophy"></i> Sports to Monitor</h5>
+                <div id="sports-checkboxes">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bookmakers -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-building"></i> Included Bookmakers</h5>
+                <div id="bookmaker-checkboxes">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- DFS Bookmakers -->
+        <div class="col-md-6 mb-4">
+            <div class="settings-section">
+                <h5><i class="bi bi-trophy-fill"></i> DFS Bookmakers (Fantasy)</h5>
+                <div id="dfs-bookmaker-checkboxes">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Save Settings
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="loadSettings()">
+                    <i class="bi bi-arrow-clockwise"></i> Reset
+                </button>
+            </div>
+            <div class="form-text mt-2">
+                <i class="bi bi-info-circle"></i> Changes are saved to config_overrides.json. Restart the collector to apply changes.
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Toast for save notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="save-toast" class="toast" role="alert">
+        <div class="toast-header">
+            <strong class="me-auto">Settings</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toast-message">
+            Settings saved successfully!
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ALL_SPORTS = [
+    { key: 'americanfootball_nfl', name: 'NFL' },
+    { key: 'americanfootball_ncaaf', name: 'NCAAF' },
+    { key: 'basketball_nba', name: 'NBA' },
+    { key: 'basketball_ncaab', name: 'NCAAB' },
+    { key: 'icehockey_nhl', name: 'NHL' },
+    { key: 'baseball_mlb', name: 'MLB' },
+    { key: 'soccer', name: 'Soccer' },
+    { key: 'soccer_epl', name: 'EPL' },
+    { key: 'mma_mixed_martial_arts', name: 'MMA' },
+];
+
+const ALL_BOOKMAKERS = [
+    { key: 'draftkings', name: 'DraftKings' },
+    { key: 'fanduel', name: 'FanDuel' },
+    { key: 'betmgm', name: 'BetMGM' },
+    { key: 'caesars', name: 'Caesars' },
+    { key: 'williamhill_us', name: 'William Hill' },
+    { key: 'pointsbet_us', name: 'PointsBet' },
+    { key: 'fanatics', name: 'Fanatics' },
+];
+
+const ALL_DFS_BOOKMAKERS = [
+    { key: 'prizepicks', name: 'PrizePicks' },
+    { key: 'underdog', name: 'Underdog' },
+    { key: 'betr_us_dfs', name: 'Betr' },
+];
+
+let currentSettings = {};
+
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        currentSettings = await response.json();
+        
+        // Check if response contains error
+        if (currentSettings.error) {
+            throw new Error(currentSettings.error);
+        }
+
+        // Populate form
+        document.getElementById('min-ev').value = currentSettings.MIN_EV_PERCENT;
+        document.getElementById('max-ev').value = currentSettings.MAX_EV_PERCENT;
+        document.getElementById('min-profit').value = currentSettings.MIN_PROFIT_PERCENT;
+        document.getElementById('max-profit').value = currentSettings.MAX_PROFIT_PERCENT;
+        document.getElementById('peak-hours-start').value = currentSettings.PEAK_HOURS_START || 12;
+        document.getElementById('peak-hours-end').value = currentSettings.PEAK_HOURS_END || 22;
+        document.getElementById('poll-peak').value = currentSettings.COLLECTOR_POLL_INTERVAL_PEAK;
+        document.getElementById('poll-offpeak').value = currentSettings.COLLECTOR_POLL_INTERVAL_OFFPEAK;
+        document.getElementById('sharp-book').value = currentSettings.SHARP_BOOKMAKER;
+        document.getElementById('devig-method').value = currentSettings.DEVIG_METHOD;
+        document.getElementById('alert-ev').checked = currentSettings.ALERT_ON_EV;
+        document.getElementById('alert-prop-ev').checked = currentSettings.ALERT_ON_PROP_EV !== false;
+        document.getElementById('alert-arb').checked = currentSettings.ALERT_ON_ARB;
+        document.getElementById('enable-player-props').checked = currentSettings.ENABLE_PLAYER_PROPS !== false;
+        document.getElementById('prop-hours-before').value = currentSettings.PROP_HOURS_BEFORE_GAME || 24;
+        document.getElementById('max-prop-events').value = currentSettings.MAX_PROP_EVENTS_PER_CYCLE || 0;
+        document.getElementById('data-retention-days').value = currentSettings.DATA_RETENTION_DAYS || 7;
+
+        // Sports checkboxes
+        const sportsContainer = document.getElementById('sports-checkboxes');
+        const sportsArray = currentSettings.SPORTS || [];
+        sportsContainer.innerHTML = ALL_SPORTS.map(sport => `
+            <div class="form-check">
+                <input class="form-check-input sport-checkbox" type="checkbox"
+                       id="sport-${sport.key}" value="${sport.key}"
+                       ${sportsArray.includes(sport.key) ? 'checked' : ''}>
+                <label class="form-check-label" for="sport-${sport.key}">${sport.name}</label>
+            </div>
+        `).join('');
+
+        // Bookmaker checkboxes
+        const booksContainer = document.getElementById('bookmaker-checkboxes');
+        const booksArray = currentSettings.INCLUDE_BOOKMAKERS || [];
+        booksContainer.innerHTML = ALL_BOOKMAKERS.map(book => `
+            <div class="form-check">
+                <input class="form-check-input book-checkbox" type="checkbox"
+                       id="book-${book.key}" value="${book.key}"
+                       ${booksArray.includes(book.key) ? 'checked' : ''}>
+                <label class="form-check-label" for="book-${book.key}">${book.name}</label>
+            </div>
+        `).join('');
+
+        // DFS Bookmaker checkboxes
+        const dfsContainer = document.getElementById('dfs-bookmaker-checkboxes');
+        const dfsBookmakers = currentSettings.DFS_BOOKMAKERS || [];
+        dfsContainer.innerHTML = ALL_DFS_BOOKMAKERS.map(book => `
+            <div class="form-check">
+                <input class="form-check-input dfs-book-checkbox" type="checkbox"
+                       id="dfs-book-${book.key}" value="${book.key}"
+                       ${dfsBookmakers.includes(book.key) ? 'checked' : ''}>
+                <label class="form-check-label" for="dfs-book-${book.key}">${book.name}</label>
+            </div>
+        `).join('');
+
+    } catch (e) {
+        console.error('Failed to load settings:', e);
+        alert('Failed to load settings: ' + e.message);
+    }
+}
+
+async function saveSettings(e) {
+    e.preventDefault();
+
+    // Gather form values
+    const settings = {
+        MIN_EV_PERCENT: parseFloat(document.getElementById('min-ev').value),
+        MAX_EV_PERCENT: parseFloat(document.getElementById('max-ev').value),
+        MIN_PROFIT_PERCENT: parseFloat(document.getElementById('min-profit').value),
+        MAX_PROFIT_PERCENT: parseFloat(document.getElementById('max-profit').value),
+        PEAK_HOURS_START: parseInt(document.getElementById('peak-hours-start').value),
+        PEAK_HOURS_END: parseInt(document.getElementById('peak-hours-end').value),
+        COLLECTOR_POLL_INTERVAL_PEAK: parseInt(document.getElementById('poll-peak').value),
+        COLLECTOR_POLL_INTERVAL_OFFPEAK: parseInt(document.getElementById('poll-offpeak').value),
+        SHARP_BOOKMAKER: document.getElementById('sharp-book').value,
+        DEVIG_METHOD: document.getElementById('devig-method').value,
+        ALERT_ON_EV: document.getElementById('alert-ev').checked,
+        ALERT_ON_PROP_EV: document.getElementById('alert-prop-ev').checked,
+        ALERT_ON_ARB: document.getElementById('alert-arb').checked,
+        ENABLE_PLAYER_PROPS: document.getElementById('enable-player-props').checked,
+        PROP_HOURS_BEFORE_GAME: parseInt(document.getElementById('prop-hours-before').value),
+        MAX_PROP_EVENTS_PER_CYCLE: parseInt(document.getElementById('max-prop-events').value),
+        DATA_RETENTION_DAYS: parseInt(document.getElementById('data-retention-days').value),
+        SPORTS: Array.from(document.querySelectorAll('.sport-checkbox:checked')).map(cb => cb.value),
+        INCLUDE_BOOKMAKERS: Array.from(document.querySelectorAll('.book-checkbox:checked')).map(cb => cb.value),
+        DFS_BOOKMAKERS: Array.from(document.querySelectorAll('.dfs-book-checkbox:checked')).map(cb => cb.value),
+    };
+
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+
+        const result = await response.json();
+
+        // Show toast
+        const toast = new bootstrap.Toast(document.getElementById('save-toast'));
+        document.getElementById('toast-message').textContent = result.message;
+        toast.show();
+
+    } catch (e) {
+        console.error('Failed to save settings:', e);
+        alert('Failed to save settings');
+    }
+}
+
+document.getElementById('settings-form').addEventListener('submit', saveSettings);
+loadSettings();
+</script>
+{% endblock %}

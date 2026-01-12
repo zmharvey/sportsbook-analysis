@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Sports Betting{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="mb-1"><i class="bi bi-speedometer2 me-2" style="color: var(--primary-light);"></i>Dashboard</h2>
+        <p class="text-muted mb-0">Your betting performance at a glance</p>
+    </div>
+</div>
+
+<!-- Primary Stats Row -->
+<div class="row mb-4 g-3">
+    <div class="col-lg-3 col-md-6">
+        <div class="card stat-card bg-primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-value text-white" id="stat-plays-today">--</div>
+                        <div class="stat-label">Plays Today</div>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="bi bi-calendar-check" style="font-size: 1.75rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card stat-card bg-info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-value text-white" id="stat-plays-week">--</div>
+                        <div class="stat-label">Plays This Week</div>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="bi bi-calendar-week" style="font-size: 1.75rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card stat-card bg-success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-value text-white" id="stat-win-rate">--%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="bi bi-trophy" style="font-size: 1.75rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card stat-card bg-warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-value" style="color: #1e293b;" id="stat-pending">--</div>
+                        <div class="stat-label" style="color: #475569;">Pending Plays</div>
+                    </div>
+                    <div style="color: rgba(30, 41, 59, 0.3);">
+                        <i class="bi bi-hourglass-split" style="font-size: 1.75rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Stats Row -->
+<div class="row mb-4 g-3">
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-value text-success" id="stat-profit">--</div>
+                <div class="stat-label">Total Profit</div>
+                <div class="text-muted small mt-1">Units</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-value" id="stat-roi">--%</div>
+                <div class="stat-label">ROI</div>
+                <div class="text-muted small mt-1">Return</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-value ev-positive" id="stat-avg-ev">--%</div>
+                <div class="stat-label">Avg EV</div>
+                <div class="text-muted small mt-1">Per Play</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card h-100" title="Comparing your sent odds vs current market odds on pre-game plays">
+            <div class="card-body text-center">
+                <div class="stat-value" id="stat-current-value">--%</div>
+                <div class="stat-label">Current Value</div>
+                <div class="text-muted small mt-1">Pre-Game</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card h-100" title="Average closing line value - how much better your odds were vs closing">
+            <div class="card-body text-center">
+                <div class="stat-value" id="stat-avg-clv">--%</div>
+                <div class="stat-label">Avg CLV</div>
+                <div class="text-muted small mt-1">Post-Game</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card h-100" title="Percentage of completed plays that beat the closing line">
+            <div class="card-body text-center">
+                <div class="stat-value" id="stat-clv-rate">--%</div>
+                <div class="stat-label">CLV Rate</div>
+                <div class="text-muted small mt-1">Beat Close</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Record and Bankroll Cards -->
+<div class="row mb-4 g-3">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-trophy"></i> Record</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center g-4">
+                    <div class="col-4">
+                        <div class="display-6 text-success fw-bold" id="stat-wins">--</div>
+                        <div class="text-muted small text-uppercase fw-semibold">Wins</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="display-6 text-danger fw-bold" id="stat-losses">--</div>
+                        <div class="text-muted small text-uppercase fw-semibold">Losses</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="display-6 text-secondary fw-bold" id="stat-pushes">--</div>
+                        <div class="text-muted small text-uppercase fw-semibold">Pushes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bank"></i> Bankroll</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center g-4">
+                    <div class="col-6">
+                        <div class="display-6 fw-bold" id="stat-units-wagered">--</div>
+                        <div class="text-muted small text-uppercase fw-semibold">Units Wagered</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="display-6 fw-bold" id="stat-total-plays">--</div>
+                        <div class="text-muted small text-uppercase fw-semibold">Total Plays</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profit Graph -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Cumulative Profit Over Time</h5>
+                <span class="refresh-indicator">
+                    <span class="spinner-border spinner-border-sm d-none" id="graph-spinner"></span>
+                    Auto-refreshes
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="graph-container" style="height: 350px;">
+                    <canvas id="profit-chart"></canvas>
+                </div>
+                <div id="no-profit-data" class="text-center py-5 d-none">
+                    <i class="bi bi-graph-up text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="text-muted mt-3 mb-0">Enter results on your plays to see profit over time</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let profitChart = null;
+
+async function loadStats() {
+    try {
+        // Load combined stats, current value stats, and CLV stats in parallel
+        const [statsRes, valueRes, clvRes] = await Promise.all([
+            fetch('/api/combined-stats'),
+            fetch('/api/current-value'),
+            fetch('/api/clv-stats')
+        ]);
+        
+        const stats = await statsRes.json();
+        const valueStats = await valueRes.json();
+        const clvStats = await clvRes.json();
+
+        document.getElementById('stat-plays-today').textContent = stats.plays_today;
+        document.getElementById('stat-plays-week').textContent = stats.plays_week;
+        document.getElementById('stat-win-rate').textContent = stats.win_rate + '%';
+        document.getElementById('stat-pending').textContent = stats.pending_plays;
+
+        const profitEl = document.getElementById('stat-profit');
+        profitEl.textContent = (stats.total_profit >= 0 ? '+' : '') + stats.total_profit.toFixed(2);
+        profitEl.className = 'stat-value ' + (stats.total_profit >= 0 ? 'text-success' : 'text-danger');
+
+        const roiEl = document.getElementById('stat-roi');
+        roiEl.textContent = (stats.roi >= 0 ? '+' : '') + stats.roi.toFixed(2) + '%';
+        roiEl.className = 'stat-value ' + (stats.roi >= 0 ? 'text-success' : 'text-danger');
+
+        document.getElementById('stat-avg-ev').textContent = '+' + stats.avg_ev.toFixed(2) + '%';
+
+        // Current Value stats (pre-game plays only)
+        const currentValueEl = document.getElementById('stat-current-value');
+        const cv = valueStats.avg_current_value;
+        currentValueEl.textContent = (cv >= 0 ? '+' : '') + cv.toFixed(2) + '%';
+        currentValueEl.className = 'stat-value ' + (cv >= 0 ? 'text-success' : 'text-danger');
+        
+        // CLV stats (post-game plays)
+        const avgClvEl = document.getElementById('stat-avg-clv');
+        const avgClv = clvStats.avg_clv;
+        avgClvEl.textContent = (avgClv >= 0 ? '+' : '') + avgClv.toFixed(2) + '%';
+        avgClvEl.className = 'stat-value ' + (avgClv >= 0 ? 'text-success' : 'text-danger');
+        
+        const clvRateEl = document.getElementById('stat-clv-rate');
+        clvRateEl.textContent = clvStats.positive_clv_rate + '%';
+        clvRateEl.className = 'stat-value ' + (clvStats.positive_clv_rate >= 50 ? 'text-success' : 'text-warning');
+
+        document.getElementById('stat-wins').textContent = stats.wins;
+        document.getElementById('stat-losses').textContent = stats.losses;
+        document.getElementById('stat-pushes').textContent = stats.pushes;
+
+        document.getElementById('stat-units-wagered').textContent = stats.total_units.toFixed(2);
+        document.getElementById('stat-total-plays').textContent = stats.total_plays;
+
+        dashboardUtils.updateLastUpdated();
+    } catch (e) {
+        console.error('Failed to load stats:', e);
+    }
+}
+
+async function loadProfitGraph() {
+    const spinner = document.getElementById('graph-spinner');
+    spinner?.classList.remove('d-none');
+    
+    try {
+        const response = await fetch('/api/combined-profit-history');
+        const data = await response.json();
+
+        const chartCanvas = document.getElementById('profit-chart');
+        const noDataMsg = document.getElementById('no-profit-data');
+
+        if (!data.points || data.points.length === 0) {
+            chartCanvas.style.display = 'none';
+            noDataMsg.classList.remove('d-none');
+            return;
+        }
+
+        chartCanvas.style.display = 'block';
+        noDataMsg.classList.add('d-none');
+
+        const ctx = chartCanvas.getContext('2d');
+
+        if (profitChart) {
+            profitChart.destroy();
+        }
+
+        // Parse dates - data.points.date is ISO string in CST timezone
+        const labels = data.points.map(p => {
+            // Chart.js date adapter can handle ISO strings directly
+            return new Date(p.date);
+        });
+        const profits = data.points.map(p => p.cumulative_profit);
+
+        const isPositive = profits[profits.length - 1] >= 0;
+        const borderColor = isPositive ? '#22c55e' : '#ef4444';
+        const backgroundColor = isPositive 
+            ? 'rgba(34, 197, 94, 0.1)' 
+            : 'rgba(239, 68, 68, 0.1)';
+
+        profitChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Cumulative Profit (Units)',
+                    data: profits,
+                    borderColor: borderColor,
+                    backgroundColor: backgroundColor,
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: borderColor,
+                    pointBorderColor: 'rgba(30, 41, 59, 0.9)',
+                    pointBorderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                        titleFont: { size: 14, weight: 'bold', family: 'Inter' },
+                        bodyFont: { size: 13, family: 'Inter' },
+                        padding: 14,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        borderColor: 'rgba(148, 163, 184, 0.2)',
+                        borderWidth: 1,
+                        callbacks: {
+                            title: function(context) {
+                                return new Date(context[0].label).toLocaleDateString('en-US', {
+                                    weekday: 'long',
+                                    month: 'short',
+                                    day: 'numeric'
+                                });
+                            },
+                            label: function(context) {
+                                const value = context.raw;
+                                return `Profit: ${value >= 0 ? '+' : ''}${value.toFixed(2)} units`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            displayFormats: {
+                                day: 'MMM d'
+                            },
+                            tooltipFormat: 'MMM d, yyyy'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date',
+                            font: { weight: '600', family: 'Inter' },
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.08)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { family: 'Inter' }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Cumulative Profit (Units)',
+                            font: { weight: '600', family: 'Inter' },
+                            color: '#94a3b8'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return (value >= 0 ? '+' : '') + value.toFixed(1);
+                            },
+                            color: '#94a3b8',
+                            font: { family: 'Inter' }
+                        },
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.08)',
+                            drawBorder: false
+                        }
+                    }
+                }
+            }
+        });
+
+    } catch (e) {
+        console.error('Failed to load profit graph:', e);
+    } finally {
+        spinner?.classList.add('d-none');
+    }
+}
+
+// Load stats and graph on page load and refresh every 60 seconds
+loadStats();
+loadProfitGraph();
+setInterval(loadStats, 60000);
+setInterval(loadProfitGraph, 60000);
+</script>
+{% endblock %}
